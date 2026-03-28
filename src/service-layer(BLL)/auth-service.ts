@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { dataQueryRepository } from "../repository-layers/query-repository-layer/query-repository";
-import { bcryptService } from "../adapters/authentication/bcrypt-service";
+import { BcryptService } from "../adapters/authentication/bcrypt-service";
 import { jwtService } from "../adapters/verification/jwt-service";
 import { CustomResult } from "../common/result-type/result-type";
 import { HttpStatus } from "../common/http-statuses/http-statuses";
@@ -20,16 +20,19 @@ import { RequestWithBody } from "../routers/request-types/request-types";
 import { AuthLoginInputModel } from "../routers/router-types/auth-login-input-model";
 import { UserSession } from "../common/classes/session-class";
 import { envConfig } from "../config";
+import { UsersQueryRepository } from "../repository-layers/query-repository-layer/users-query-repository";
+import { SessionsCommandRepository } from "../repository-layers/command-repository-layer/sessions-command-repository";
 
-export const authService = {
-    async loginUser(
+
+export class AuthService {
+    static async loginUser(
         req: RequestWithBody<AuthLoginInputModel>,
         res: Response,
     ): Promise<CustomResult<RotationPairToken>> {
         const { loginOrEmail, password } = req.body;
 
         // проверяем что пользователь с указанным логином/емейлом уже существует в базе
-        const user = await dataQueryRepository.findByLoginOrEmail(loginOrEmail);
+        const user = await UsersQueryRepository.findByLoginOrEmail(loginOrEmail);
 
         if (!user) {
             return {
@@ -100,7 +103,7 @@ export const authService = {
 
         // создаем сессию в базе
         const isSuccessfulSessionCreated =
-            await dataCommandRepository.createSession(tempSession);
+            await SessionsCommandRepository.createSession(tempSession);
 
         if (!isSuccessfulSessionCreated) {
             console.error(
@@ -138,10 +141,10 @@ export const authService = {
         }
 
         return pairOfToken;
-    },
+    }
 
     // пробуем зарегистрировать возвращенный от юзера код подтверждения
-    async confirmRegistrationCode(
+    static async confirmRegistrationCode(
         sentData: RegistrationConfirmationInput,
     ): Promise<CustomResult> {
         try {
@@ -153,7 +156,7 @@ export const authService = {
                 data: null,
                 statusCode: HttpStatus.InternalServerError,
                 statusDescription:
-                    "Unknown error in authService -> confirmRegistrationCode",
+                    "Unknown error in AuthService -> confirmRegistrationCode",
                 errorsMessages: [
                     {
                         field: "",
@@ -162,10 +165,10 @@ export const authService = {
                 ],
             };
         }
-    },
+    }
 
     // пробуем зарегистрировать пользователя по его запросу (т.е. по запросу фронта)
-    async registerNewUser(
+    static async registerNewUser(
         sentData: RegistrationUserInputModel,
     ): Promise<CustomResult> {
         try {
@@ -179,10 +182,10 @@ export const authService = {
                     data: null,
                     statusCode: HttpStatus.BadRequest,
                     statusDescription:
-                        "authService -> registerNewUser -> if(ifUserLoginExists)",
+                        "AuthService -> registerNewUser -> if(ifUserLoginExists)",
                     errorsMessages: [
                         {
-                            field: "authService -> registerNewUser -> if(ifUserLoginExists)",
+                            field: "AuthService -> registerNewUser -> if(ifUserLoginExists)",
                             message: "Email or Login already exists!!!",
                         },
                     ],
@@ -193,7 +196,7 @@ export const authService = {
                     data: null,
                     statusCode: HttpStatus.BadRequest,
                     statusDescription:
-                        "authService -> registerNewUser -> if(ifUserEmailExists)",
+                        "AuthService -> registerNewUser -> if(ifUserEmailExists)",
                     errorsMessages: [
                         {
                             field: "email",
@@ -203,7 +206,7 @@ export const authService = {
                 };
             }
 
-            const passwordHash = await bcryptService.generateHash(
+            const passwordHash = await BcryptService.generateHash(
                 sentData.password,
             );
 
@@ -299,7 +302,7 @@ export const authService = {
                 data: null,
                 statusCode: HttpStatus.InternalServerError,
                 statusDescription:
-                    "Unknown error in authService -> registerNewUser",
+                    "Unknown error in AuthService -> registerNewUser",
                 errorsMessages: [
                     {
                         field: "",
@@ -308,10 +311,10 @@ export const authService = {
                 ],
             };
         }
-    },
+    }
 
     // запрос на повторную отправку email с подтверждением регистрационного кода
-    async resendConfirmRegistrationCode(
+    static async resendConfirmRegistrationCode(
         sentData: ResentRegistrationConfirmationInput,
     ): Promise<CustomResult> {
         try {
@@ -329,7 +332,7 @@ export const authService = {
                     data: null,
                     statusCode: HttpStatus.BadRequest,
                     statusDescription:
-                        "authService -> resendConfirmRegistrationCode -> if (isUserInDatabase)",
+                        "AuthService -> resendConfirmRegistrationCode -> if (isUserInDatabase)",
                     errorsMessages: [
                         {
                             field: "email",
@@ -348,7 +351,7 @@ export const authService = {
                 data: null,
                 statusCode: HttpStatus.InternalServerError,
                 statusDescription:
-                    "Unknown error in authService -> resendConfirmRegistrationCode",
+                    "Unknown error in AuthService -> resendConfirmRegistrationCode",
                 errorsMessages: [
                     {
                         field: "",
@@ -357,10 +360,10 @@ export const authService = {
                 ],
             };
         }
-    },
+    }
 
     // обновляет сессию, генерирует и возвращает два токена
-    async refreshTokenOnDemand(
+    static async refreshTokenOnDemand(
         deviceId: string,
         userId: string,
         sessionId: ObjectId,
@@ -379,7 +382,7 @@ export const authService = {
         );
 
         // обновляем данные в базе сессий
-        const isSessionUpdated = await dataCommandRepository.updateSession(
+        const isSessionUpdated = await SessionsCommandRepository.updateSession(
             expiresAt,
             issuedAt,
             sessionId,
@@ -392,7 +395,7 @@ export const authService = {
                 statusDescription: "Couldn't update session data",
                 errorsMessages: [
                     {
-                        field: "authService -> refreshTokenOnDemand -> dataCommandRepository.updateSession(expiresAt, issuedAt, sessionId)",
+                        field: "AuthService -> refreshTokenOnDemand -> dataCommandRepository.updateSession(expiresAt, issuedAt, sessionId)",
                         message: "Couldn't update session data",
                     },
                 ],
@@ -437,7 +440,7 @@ export const authService = {
         //             "Couldn't insert outdated refresh token into the blacklist",
         //         errorsMessages: [
         //             {
-        //                 field: "authService -> refreshTokenOnDemand -> if (!ifSucessfullyAddedToBlackList)",
+        //                 field: "AuthService -> refreshTokenOnDemand -> if (!ifSucessfullyAddedToBlackList)",
         //                 message:
         //                     "Couldn't insert outdated refresh token into the blacklist",
         //             },
@@ -446,9 +449,9 @@ export const authService = {
         // }
 
         return pairOfToken;
-    },
+    }
 
-    async logoutOnDemand(
+    static async logoutOnDemand(
         // oldRefreshToken: string,
         relatedUserId: string,
         sessionId: ObjectId,
@@ -459,16 +462,469 @@ export const authService = {
         //         relatedUserId: relatedUserId,
         //     });
         const ifLoggedOutSuccessfully =
-            await dataCommandRepository.removeSessionBySessionId(sessionId);
+            await SessionsCommandRepository.removeSessionBySessionId(sessionId);
 
         return ifLoggedOutSuccessfully;
-    },
+    }
 
     // вспомогательная функция
-    async checkUserCredentials(
+    static async checkUserCredentials(
         password: string,
         passwordHash: string,
     ): Promise<boolean | null> {
-        return bcryptService.checkPassword(password, passwordHash);
-    },
+        return BcryptService.checkPassword(password, passwordHash);
+    }
 };
+
+
+// export const AuthService = {
+//     async loginUser(
+//         req: RequestWithBody<AuthLoginInputModel>,
+//         res: Response,
+//     ): Promise<CustomResult<RotationPairToken>> {
+//         const { loginOrEmail, password } = req.body;
+//
+//         // проверяем что пользователь с указанным логином/емейлом уже существует в базе
+//         const user = await UsersQueryRepository.findByLoginOrEmail(loginOrEmail);
+//
+//         if (!user) {
+//             return {
+//                 data: null,
+//                 statusCode: HttpStatus.Unauthorized,
+//                 statusDescription: "Wrong login or password", // по сути это "User does not exist", но на фронт такие детали не должны утекать
+//                 errorsMessages: [
+//                     {
+//                         field: "dataQueryRepository.findByLoginOrEmail", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
+//                         message: "Wrong login or password",
+//                     },
+//                 ],
+//             };
+//         }
+//
+//         // если существует - проверяем что пароль верен
+//         const isCorrectCredentials = await this.checkUserCredentials(
+//             password,
+//             user.passwordHash,
+//         );
+//
+//         if (isCorrectCredentials === false) {
+//             return {
+//                 data: null,
+//                 statusCode: HttpStatus.Unauthorized,
+//                 statusDescription: "Wrong login or password",
+//                 errorsMessages: [
+//                     {
+//                         field: "loginUser -> checkUserCredentials",
+//                         message: "Wrong login or password",
+//                     },
+//                 ],
+//             };
+//         } else if (isCorrectCredentials === null) {
+//             return {
+//                 data: null,
+//                 statusCode: HttpStatus.InternalServerError,
+//                 statusDescription:
+//                     "Failed attempt to check credentials login or password",
+//                 errorsMessages: [
+//                     {
+//                         field: "loginUser -> checkUserCredentials",
+//                         message:
+//                             "Failed attempt to check credentials login or password",
+//                     },
+//                 ],
+//             };
+//         }
+//
+//         // создаем мета данные для сессии
+//         const sessionObjectId = new ObjectId();
+//         const deviceName = req.get("User-Agent") || ""; // или req.headers['user-agent'] - обязательно с малыми, т.к. по стандарту http все приводится к строчным. Методы .get и .header же осуществляют приведение к строчным(маленьким) под капотом
+//         const deviceIp = req.ip || "";
+//
+//         // создаем объект сессии
+//         const tempSession = new UserSession(
+//             sessionObjectId,
+//             user.id,
+//             deviceName,
+//             deviceIp,
+//         );
+//         const sessionIat = tempSession.issuedAt;
+//         const sessionExp = tempSession.expiresAt;
+//         const sessionDeviceId = tempSession.deviceId;
+//
+//         // здесь логика у нас следующая
+//         // - в любом случае создаем новую сессию со всеми присущими определенными идентификаторами и параметрами
+//
+//         // создаем сессию в базе
+//         const isSuccessfulSessionCreated =
+//             await SessionsCommandRepository.createSession(tempSession);
+//
+//         if (!isSuccessfulSessionCreated) {
+//             console.error(
+//                 "Error inside loginUser -> dataCommandRepository.createSession(tempSession)",
+//             );
+//             return {
+//                 data: null,
+//                 statusCode: HttpStatus.InternalServerError,
+//                 statusDescription:
+//                     "Error inside loginUser -> dataCommandRepository.createSession(tempSession)",
+//                 errorsMessages: [
+//                     {
+//                         field: "dataCommandRepository.createSession(tempSession)",
+//                         message: "Error while creating session",
+//                     },
+//                 ],
+//             };
+//         }
+//
+//         // создаем пару токенов
+//         const pairOfToken = await createTokenPair(
+//             user.id,
+//             sessionIat,
+//             sessionExp,
+//             sessionDeviceId,
+//         );
+//         if (!pairOfToken.data) {
+//             console.error(pairOfToken.statusDescription);
+//             return {
+//                 data: null,
+//                 statusCode: pairOfToken.statusCode,
+//                 statusDescription: pairOfToken.statusDescription,
+//                 errorsMessages: pairOfToken.errorsMessages,
+//             };
+//         }
+//
+//         return pairOfToken;
+//     },
+//
+//     // пробуем зарегистрировать возвращенный от юзера код подтверждения
+//     async confirmRegistrationCode(
+//         sentData: RegistrationConfirmationInput,
+//     ): Promise<CustomResult> {
+//         try {
+//             return await dataCommandRepository.confirmRegistrationCode(
+//                 sentData,
+//             );
+//         } catch (error) {
+//             return {
+//                 data: null,
+//                 statusCode: HttpStatus.InternalServerError,
+//                 statusDescription:
+//                     "Unknown error in AuthService -> confirmRegistrationCode",
+//                 errorsMessages: [
+//                     {
+//                         field: "",
+//                         message: "Unknown error",
+//                     },
+//                 ],
+//             };
+//         }
+//     },
+//
+//     // пробуем зарегистрировать пользователя по его запросу (т.е. по запросу фронта)
+//     async registerNewUser(
+//         sentData: RegistrationUserInputModel,
+//     ): Promise<CustomResult> {
+//         try {
+//             const ifUserLoginExists =
+//                 await dataCommandRepository.findByLoginOrEmail(sentData.login);
+//             const ifUserEmailExists =
+//                 await dataCommandRepository.findByLoginOrEmail(sentData.email);
+//
+//             if (ifUserLoginExists) {
+//                 return {
+//                     data: null,
+//                     statusCode: HttpStatus.BadRequest,
+//                     statusDescription:
+//                         "AuthService -> registerNewUser -> if(ifUserLoginExists)",
+//                     errorsMessages: [
+//                         {
+//                             field: "AuthService -> registerNewUser -> if(ifUserLoginExists)",
+//                             message: "Email or Login already exists!!!",
+//                         },
+//                     ],
+//                 };
+//             }
+//             if (ifUserEmailExists) {
+//                 return {
+//                     data: null,
+//                     statusCode: HttpStatus.BadRequest,
+//                     statusDescription:
+//                         "AuthService -> registerNewUser -> if(ifUserEmailExists)",
+//                     errorsMessages: [
+//                         {
+//                             field: "email",
+//                             message: "Email or Login already exists!!!",
+//                         },
+//                     ],
+//                 };
+//             }
+//
+//             const passwordHash = await bcryptService.generateHash(
+//                 sentData.password,
+//             );
+//
+//             if (!passwordHash) {
+//                 return {
+//                     data: null,
+//                     statusCode: HttpStatus.InternalServerError,
+//                     statusDescription: "",
+//                     errorsMessages: [
+//                         {
+//                             field: "bcryptService.generateHash",
+//                             message: "Generating hash error",
+//                         },
+//                     ],
+//                 };
+//             }
+//
+//             const tempId = new ObjectId();
+//
+//             // console.log(
+//             //     "REGISTERED NEW HERE <-------------",
+//             //     tempId.toString()
+//             // );
+//             // нижеследующее заменили на инициализацию через клас User через extend interface UserCollectionStorageModel
+//             // const newUserEntry = {
+//             //     _id: tempId,
+//             //     id: tempId.toString(),
+//             //     login: sentNewUser.login,
+//             //     email: sentNewUser.email,
+//             //     passwordHash: passwordHash,
+//             //     createdAt: new Date(),
+//             // } as UserCollectionStorageModel;
+//
+//             const newUserEntry = new User(
+//                 sentData.login,
+//                 sentData.email,
+//                 passwordHash,
+//                 tempId,
+//             );
+//
+//             const newUserInsertionResult =
+//                 await dataCommandRepository.registerNewUser(newUserEntry);
+//
+//             if (newUserInsertionResult.statusCode !== HttpStatus.Ok) {
+//                 return {
+//                     data: newUserInsertionResult.data,
+//                     statusCode: newUserInsertionResult.statusCode,
+//                     statusDescription: newUserInsertionResult.statusDescription,
+//                     errorsMessages: newUserInsertionResult.errorsMessages,
+//                 };
+//             }
+//
+//             // здесь отсылка письма. с точки зрения обработки потенциальных ошибок
+//             // максимум того что целесообразно сделать, это в том случае если по какой-то причине с нашей стороны чтото сломалось
+//             // никак не говорить об этом юзерам, пускай они самостоятельно повторно отправляют запрос, мы максимум логируем ошибку
+//             // тут жестко будет связано с политикой компании по этому поводу
+//             // так делается чтобы не брать на себя лишней работы, т.к. в случае реальной проблемы с сервисом отправки мы так или иначе будем это чинить
+//             // а если письмо просто потерялось или юзер тупит - для нас это может быть куча лишней работы по обслуживанию непонятно чего
+//             // так что во втором случае пусть юзер сам лучше на себя возьмет это работу - просто повторно отправит если что запррос, нам главно оптимально подобрать период удалления неподтвержденных данных (минут 15-30)
+//
+//             const sendingResult =
+//                 await mailerService.sendConfirmationRegisterEmail(
+//                     '"Alex St" <geniusb198@yandex.ru>',
+//                     newUserEntry.email,
+//                     newUserEntry.emailConfirmation.confirmationCode,
+//                     emailExamples.registrationEmail,
+//                 );
+//
+//             let status =
+//                 "Sending went without problems, awaiting confirmation form user";
+//             if (!sendingResult) {
+//                 console.error(
+//                     "Something went wrong while sending the registration email",
+//                 );
+//                 status =
+//                     "Something went wrong while sending the registration email";
+//             }
+//
+//             // отправка результата что все ОК
+//             return {
+//                 data: null,
+//                 statusCode: HttpStatus.NoContent,
+//                 statusDescription: status,
+//                 errorsMessages: [
+//                     {
+//                         field: "",
+//                         message: "",
+//                     },
+//                 ],
+//             };
+//         } catch (error) {
+//             return {
+//                 data: null,
+//                 statusCode: HttpStatus.InternalServerError,
+//                 statusDescription:
+//                     "Unknown error in AuthService -> registerNewUser",
+//                 errorsMessages: [
+//                     {
+//                         field: "",
+//                         message: "Unknown error",
+//                     },
+//                 ],
+//             };
+//         }
+//     },
+//
+//     // запрос на повторную отправку email с подтверждением регистрационного кода
+//     async resendConfirmRegistrationCode(
+//         sentData: ResentRegistrationConfirmationInput,
+//     ): Promise<CustomResult> {
+//         try {
+//
+//             // const allUsersList = await dataCommandRepository.findAllUsers();
+//             // console.log("DEBUG: ", allUsersList);
+//
+//             const isUserInDatabase =
+//                 await dataCommandRepository.findNotConfirmedByEmail(
+//                     sentData.email,
+//                 );
+//
+//             if (!isUserInDatabase) {
+//                 return {
+//                     data: null,
+//                     statusCode: HttpStatus.BadRequest,
+//                     statusDescription:
+//                         "AuthService -> resendConfirmRegistrationCode -> if (isUserInDatabase)",
+//                     errorsMessages: [
+//                         {
+//                             field: "email",
+//                             message: "Email doesn't exist or already confirmed",
+//                         },
+//                     ],
+//                 };
+//             }
+//
+//             return await dataCommandRepository.resendConfirmRegistrationCode(
+//                 sentData,
+//                 isUserInDatabase,
+//             );
+//         } catch (error) {
+//             return {
+//                 data: null,
+//                 statusCode: HttpStatus.InternalServerError,
+//                 statusDescription:
+//                     "Unknown error in AuthService -> resendConfirmRegistrationCode",
+//                 errorsMessages: [
+//                     {
+//                         field: "",
+//                         message: "Unknown error",
+//                     },
+//                 ],
+//             };
+//         }
+//     },
+//
+//     // обновляет сессию, генерирует и возвращает два токена
+//     async refreshTokenOnDemand(
+//         deviceId: string,
+//         userId: string,
+//         sessionId: ObjectId,
+//     ): Promise<CustomResult<RotationPairToken>> {
+//         // const sessionData = await findSessionByPrimaryKey(sessionId);
+//         // формируем новые даты exp и iat
+//         const currentTimeMs = Date.now();
+//         // Преобразуем в секунды с округлением вниз
+//         const timestampSeconds = Math.floor(currentTimeMs / 1000);
+//         // Создаём Date из округлённых секунд (будет кратно 1000 мс)
+//         const issuedAt = new Date(timestampSeconds * 1000);
+//
+//         // Устанавливаем expiresAt на основе той же базовой временной метки
+//         const expiresAt = new Date(
+//             issuedAt.getTime() + envConfig.refreshTokenLifetime * 1000,
+//         );
+//
+//         // обновляем данные в базе сессий
+//         const isSessionUpdated = await SessionsCommandRepository.updateSession(
+//             expiresAt,
+//             issuedAt,
+//             sessionId,
+//         );
+//         if (!isSessionUpdated) {
+//             console.error("Couldn't update session data");
+//             return {
+//                 data: null,
+//                 statusCode: HttpStatus.InternalServerError,
+//                 statusDescription: "Couldn't update session data",
+//                 errorsMessages: [
+//                     {
+//                         field: "AuthService -> refreshTokenOnDemand -> dataCommandRepository.updateSession(expiresAt, issuedAt, sessionId)",
+//                         message: "Couldn't update session data",
+//                     },
+//                 ],
+//             };
+//         }
+//
+//         // создаем новые токены
+//         const pairOfToken = await createTokenPair(
+//             userId, // тоже что и sessionData!.userId,
+//             issuedAt,
+//             expiresAt,
+//             deviceId,
+//         );
+//         if (!pairOfToken.data) {
+//             console.error(pairOfToken.statusDescription);
+//             return {
+//                 data: null,
+//                 statusCode: pairOfToken.statusCode,
+//                 statusDescription: pairOfToken.statusDescription,
+//                 errorsMessages: pairOfToken.errorsMessages,
+//             };
+//         }
+//
+//         // const createdAtOldToken =
+//         //     await jwtService.decodeRefreshToken(refreshToken);
+//         //
+//         // const ifSucessfullyAddedToBlackList =
+//         //     await dataCommandRepository.addRefreshTokenInfoToBlackList({
+//         //         refreshToken: refreshToken,
+//         //         relatedUserId: userId,
+//         //         createdAt: createdAtOldToken?.iat,
+//         //     });
+//         //
+//         // if (!ifSucessfullyAddedToBlackList) {
+//         //     console.error(
+//         //         "Couldn't insert outdated refresh token into the blacklist",
+//         //     );
+//         //     return {
+//         //         data: null,
+//         //         statusCode: HttpStatus.InternalServerError,
+//         //         statusDescription:
+//         //             "Couldn't insert outdated refresh token into the blacklist",
+//         //         errorsMessages: [
+//         //             {
+//         //                 field: "AuthService -> refreshTokenOnDemand -> if (!ifSucessfullyAddedToBlackList)",
+//         //                 message:
+//         //                     "Couldn't insert outdated refresh token into the blacklist",
+//         //             },
+//         //         ],
+//         //     };
+//         // }
+//
+//         return pairOfToken;
+//     },
+//
+//     async logoutOnDemand(
+//         // oldRefreshToken: string,
+//         relatedUserId: string,
+//         sessionId: ObjectId,
+//     ): Promise<undefined | null> {
+//         // const ifSucessfullyAddedToBlackList =
+//         //     await dataCommandRepository.addRefreshTokenInfoToBlackList({
+//         //         refreshToken: oldRefreshToken,
+//         //         relatedUserId: relatedUserId,
+//         //     });
+//         const ifLoggedOutSuccessfully =
+//             await SessionsCommandRepository.removeSessionBySessionId(sessionId);
+//
+//         return ifLoggedOutSuccessfully;
+//     },
+//
+//     // вспомогательная функция
+//     async checkUserCredentials(
+//         password: string,
+//         passwordHash: string,
+//     ): Promise<boolean | null> {
+//         return BcryptService.checkPassword(password, passwordHash);
+//     },
+// };

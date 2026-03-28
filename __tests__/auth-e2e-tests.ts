@@ -194,7 +194,7 @@ describe("Test API for managing login, registration and registration-confirmatio
     //             .post(`${AUTH_PATH}/registration`)
     //             .send(newUserToRegisterViaEmail);
     //
-    //         // const mockedServiceCall = authService.registerNewUser;
+    //         // const mockedServiceCall = AuthService.registerNewUser;
     //
     //         expect(res.status)
     //             .toBe(HttpStatus.NoContent);
@@ -231,7 +231,7 @@ describe("Test API for managing login, registration and registration-confirmatio
             .post(`${AUTH_PATH}/registration`)
             .send(newUserToRegisterViaEmail1);
 
-        // const mockedServiceCall = authService.registerNewUser;
+        // const mockedServiceCall = AuthService.registerNewUser;
 
         expect(res.status).toBe(HttpStatus.BadRequest);
         expect(res1.status).toBe(HttpStatus.BadRequest);

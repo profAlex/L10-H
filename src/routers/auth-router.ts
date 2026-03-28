@@ -5,13 +5,13 @@ import {
     userInputModelValidation,
 } from "./validation-middleware/UserInputModel-validation-middleware";
 import {
-    attemptToLogin,
+    attemptToLogin, AuthHandler,
     logoutOnDemand,
     provideUserInfo,
     refreshTokenOnDemand,
     registrationAttemptByUser,
     registrationConfirmation,
-    resendRegistrationConfirmation,
+    resendRegistrationConfirmation
 } from "./router-handlers/auth-router-description";
 import { accessTokenGuard } from "./guard-middleware/access-token-guard";
 import {
@@ -25,6 +25,7 @@ import {
 } from "./guard-middleware/ip-request-restriction-guard";
 
 export const authRouter = Router();
+export const authHandler = new AuthHandler();
 
 // Try login user to the system
 authRouter.post(
@@ -32,7 +33,7 @@ authRouter.post(
     ipRequestRestrictionGuard,
     loginInputModelValidation,
     inputErrorManagementMiddleware,
-    attemptToLogin,
+    authHandler.attemptToLogin,
 );
 
 // Confirm registration
