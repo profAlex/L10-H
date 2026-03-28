@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.securityDevicesRouter = void 0;
+const express_1 = require("express");
+const id_names_1 = require("./util-enums/id-names");
+const refresh_token_guard_1 = require("./guard-middleware/refresh-token-guard");
+const security_device_deviceId_validation_1 = require("./validation-middleware/security-device-deviceId-validation");
+const security_devices_router_description_1 = require("./router-handlers/security-devices-router-description");
+exports.securityDevicesRouter = (0, express_1.Router)();
+exports.securityDevicesRouter.delete(`/:${id_names_1.IdParamName.DeviceId}`, refresh_token_guard_1.refreshTokenGuard, security_device_deviceId_validation_1.validateDeviceId, security_devices_router_description_1.removeSessionById);
+exports.securityDevicesRouter.delete(`/`, refresh_token_guard_1.refreshTokenGuard, security_devices_router_description_1.removeAllButOneSession);
+exports.securityDevicesRouter.get(`/`, refresh_token_guard_1.refreshTokenGuard, security_devices_router_description_1.getDevicesList);
