@@ -24,10 +24,12 @@ import { UsersQueryRepository } from "../repository-layers/query-repository-laye
 import { SessionsCommandRepository } from "../repository-layers/command-repository-layer/sessions-command-repository";
 import { PasswordRecoveryInputModel } from "../routers/router-types/auth-password-recovery-input-model";
 import { NewPasswordRecoveryInputModel } from "../routers/router-types/auth-new-password-recovery-input-model";
+import { UsersCommandRepository } from "../repository-layers/command-repository-layer/users-command-repository";
 
 
 export class AuthCommandService {
     constructor(
+        protected usersCommandRepository: UsersCommandRepository,
         protected usersQueryRepository: UsersQueryRepository,
         protected sessionsCommandRepository: SessionsCommandRepository,
         protected bcryptService: BcryptService
@@ -117,16 +119,16 @@ export class AuthCommandService {
 
         if (!isSuccessfulSessionCreated) {
             console.error(
-                "Error inside loginUser -> dataCommandRepository.createSession(tempSession)"
+                "Error inside loginUser -> this.sessionsCommandRepository.createSession(tempSession)"
             );
             return {
                 data: null,
                 statusCode: HttpStatus.InternalServerError,
                 statusDescription:
-                    "Error inside loginUser -> dataCommandRepository.createSession(tempSession)",
+                    "Error inside loginUser -> this.sessionsCommandRepository.createSession(tempSession)",
                 errorsMessages: [
                     {
-                        field: "dataCommandRepository.createSession(tempSession)",
+                        field: "this.sessionsCommandRepository.createSession(tempSession)",
                         message: "Error while creating session"
                     }
                 ]
@@ -158,7 +160,7 @@ export class AuthCommandService {
         sentData: RegistrationConfirmationInput
     ): Promise<CustomResult> {
         try {
-            return await dataCommandRepository.confirmRegistrationCode(
+            return await this.usersCommandRepository.confirmRegistrationCode(
                 sentData
             );
         } catch (error) {
@@ -182,7 +184,7 @@ export class AuthCommandService {
         sentData: NewPasswordRecoveryInputModel
     ): Promise<CustomResult> {
         try {
-            return await dataCommandRepository.confirmPasswordRecoveryCode(
+            return await this.usersCommandRepository.confirmPasswordRecoveryCode(
                 sentData
             );
         } catch (error) {
@@ -207,9 +209,9 @@ export class AuthCommandService {
     ): Promise<CustomResult> {
         try {
             const ifUserLoginExists =
-                await dataCommandRepository.findByLoginOrEmail(sentData.login);
+                await this.usersCommandRepository.findByLoginOrEmail(sentData.login);
             const ifUserEmailExists =
-                await dataCommandRepository.findByLoginOrEmail(sentData.email);
+                await this.usersCommandRepository.findByLoginOrEmail(sentData.email);
 
             if (ifUserLoginExists) {
                 return {
@@ -282,7 +284,7 @@ export class AuthCommandService {
             );
 
             const newUserInsertionResult =
-                await dataCommandRepository.registerNewUser(newUserEntry);
+                await this.usersCommandRepository.registerNewUser(newUserEntry);
 
             if (newUserInsertionResult.statusCode !== HttpStatus.Ok) {
                 return {
@@ -356,7 +358,7 @@ export class AuthCommandService {
             // console.log("DEBUG: ", allUsersList);
 
             const isUserInDatabase =
-                await dataCommandRepository.findNotConfirmedByEmail(
+                await this.usersCommandRepository.findNotConfirmedByEmail(
                     sentData.email
                 );
 
@@ -375,7 +377,7 @@ export class AuthCommandService {
                 };
             }
 
-            return await dataCommandRepository.resendConfirmRegistrationCode(
+            return await this.usersCommandRepository.resendConfirmRegistrationCode(
                 sentData,
                 isUserInDatabase
             );
@@ -429,7 +431,7 @@ export class AuthCommandService {
                 statusDescription: "Couldn't update session data",
                 errorsMessages: [
                     {
-                        field: "AuthCommandService -> refreshTokenOnDemand -> dataCommandRepository.updateSession(expiresAt, issuedAt, sessionId)",
+                        field: "AuthCommandService -> refreshTokenOnDemand -> this.sessionsCommandRepository.updateSession(expiresAt, issuedAt, sessionId)",
                         message: "Couldn't update session data"
                     }
                 ]
@@ -511,7 +513,7 @@ export class AuthCommandService {
             // console.log("DEBUG: ", allUsersList);
 
             const isUserInDatabase =
-                await dataCommandRepository.findNotConfirmedByEmail(
+                await this.usersCommandRepository.findConfirmedByEmail(
                     sentData.email
                 );
 
@@ -530,7 +532,7 @@ export class AuthCommandService {
                 };
             }
 
-            return await dataCommandRepository.sendPasswordRecoveryInfo(
+            return await this.usersCommandRepository.sendPasswordRecoveryInfo(
                 sentData,
                 isUserInDatabase
             );

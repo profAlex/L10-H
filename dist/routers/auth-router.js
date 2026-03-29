@@ -4,15 +4,6 @@ exports.authRouter = void 0;
 const express_1 = require("express");
 const error_management_validation_middleware_1 = require("./validation-middleware/error-management-validation-middleware");
 const UserInputModel_validation_middleware_1 = require("./validation-middleware/UserInputModel-validation-middleware");
-// import {
-//     attemptToLogin, AuthHandler,
-//     logoutOnDemand,
-//     provideUserInfo,
-//     refreshTokenOnDemand,
-//     registrationAttemptByUser,
-//     registrationConfirmation,
-//     resendRegistrationConfirmation
-// } from "./router-handlers/auth-router-description";
 const access_token_guard_1 = require("./guard-middleware/access-token-guard");
 const auth_router_general_middleware_validator_1 = require("./validation-middleware/auth-router-general-middleware-validator");
 const ip_request_restriction_guard_1 = require("./guard-middleware/ip-request-restriction-guard");
@@ -33,3 +24,7 @@ exports.authRouter.get("/me", access_token_guard_1.accessTokenGuard, composition
 exports.authRouter.post("/refresh-token", composition_root_1.refreshTokenGuardInstance.refreshTokenGuard, composition_root_1.authHandler.refreshTokenOnDemand);
 // In cookie client must send correct refreshToken that will be revoked
 exports.authRouter.post("/logout", composition_root_1.refreshTokenGuardInstance.refreshTokenGuard, composition_root_1.authHandler.logoutOnDemand);
+// Password recovery via Email confirmation. Email should be sent with RecoveryCode inside
+exports.authRouter.post("/password-recovery", ip_request_restriction_guard_1.ipRequestRestrictionGuardForResending, auth_router_general_middleware_validator_1.registrationResentConfirmationValidator, error_management_validation_middleware_1.inputErrorManagementMiddleware, composition_root_1.authHandler.sendPasswordRecoveryInfo);
+// Confirm Password recovery code and changing password
+exports.authRouter.post("/new-password", ip_request_restriction_guard_1.ipRequestRestrictionGuard, auth_router_general_middleware_validator_1.recoveryCodeValidator, error_management_validation_middleware_1.inputErrorManagementMiddleware, composition_root_1.authHandler.newPasswordRecoveryConfirmation);

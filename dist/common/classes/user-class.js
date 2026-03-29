@@ -15,6 +15,11 @@ class User {
             expirationDate: new Date(new Date().setMinutes(new Date().getMinutes() + 30)),
             isConfirmed: false,
         };
+        this.passwordRecoveryInformation = {
+            passwordRecoveryCode: null,
+            expirationDate: null,
+            isRecoveryInAction: false,
+        };
     }
 }
 exports.User = User;

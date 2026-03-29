@@ -25,6 +25,7 @@ export const usersQueryRepository = new UsersQueryRepository();
 export const usersCommandRepository = new UsersCommandRepository(bcryptService);
 
 export const authService = new AuthCommandService(
+    usersCommandRepository,
     usersQueryRepository,
     sessionsCommandRepository,
     bcryptService

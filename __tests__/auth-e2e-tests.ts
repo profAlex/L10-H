@@ -4,7 +4,6 @@ import { setupApp } from "../src/setup-app";
 import { closeDB, runDB } from "../src/db/mongo.db";
 import { AUTH_PATH, TESTING_PATH } from "../src/routers/pathes/router-pathes";
 import { UserInputModel } from "../src/routers/router-types/user-input-model";
-import { dataCommandRepository } from "../src/repository-layers/command-repository-layer/command-repository";
 import { HttpStatus } from "../src/common/http-statuses/http-statuses";
 import { RegistrationUserInputModel } from "../src/routers/router-types/auth-registration-input-model";
 import { mailerService } from "../src/adapters/email-sender/mailer-service";
@@ -13,8 +12,6 @@ import { UUIDgeneration } from "../src/adapters/randomUUIDgeneration/UUIDgenerat
 import { LoginInputModel } from "../src/routers/router-types/login-input-model";
 import jwt from "jsonwebtoken";
 import { envConfig } from "../src/config";
-import { UsersCommandRepository } from "../src/repository-layers/command-repository-layer/users-command-repository";
-import { BcryptService } from "../src/adapters/authentication/bcrypt-service";
 import { usersCommandRepository, usersQueryRepository } from "../src/composition-root/composition-root";
 
 describe("Test API for managing login, registration and registration-confirmation services", () => {

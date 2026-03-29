@@ -4,15 +4,6 @@ import {
     loginInputModelValidation,
     userInputModelValidation,
 } from "./validation-middleware/UserInputModel-validation-middleware";
-// import {
-//     attemptToLogin, AuthHandler,
-//     logoutOnDemand,
-//     provideUserInfo,
-//     refreshTokenOnDemand,
-//     registrationAttemptByUser,
-//     registrationConfirmation,
-//     resendRegistrationConfirmation
-// } from "./router-handlers/auth-router-description";
 import { accessTokenGuard } from "./guard-middleware/access-token-guard";
 import {
     recoveryCodeValidator,

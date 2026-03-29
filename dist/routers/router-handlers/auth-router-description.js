@@ -25,7 +25,10 @@ class AuthHandler {
             }
             const { accessToken, refreshToken, relatedUserId } = loginResult.data;
             // записываем данные соданного рефреш-токена в объект res для передачи при возврате
-            res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: true });
+            res.cookie("refreshToken", refreshToken, {
+                httpOnly: true,
+                secure: true,
+            });
             return res.status(http_statuses_1.HttpStatus.Ok).send({ accessToken: accessToken });
         });
         this.provideUserInfo = (req, res) => __awaiter(this, void 0, void 0, function* () {
@@ -48,6 +51,16 @@ class AuthHandler {
         });
         this.registrationConfirmation = (req, res) => __awaiter(this, void 0, void 0, function* () {
             const confirmationResult = yield this.authCommandService.confirmRegistrationCode(req.body);
+            if (confirmationResult.statusCode !== http_statuses_1.HttpStatus.NoContent) {
+                console.error("Error description: ", confirmationResult === null || confirmationResult === void 0 ? void 0 : confirmationResult.statusDescription, JSON.stringify(confirmationResult.errorsMessages));
+                return res
+                    .status(confirmationResult.statusCode)
+                    .send({ errorsMessages: confirmationResult.errorsMessages });
+            }
+            return res.sendStatus(http_statuses_1.HttpStatus.NoContent);
+        });
+        this.newPasswordRecoveryConfirmation = (req, res) => __awaiter(this, void 0, void 0, function* () {
+            const confirmationResult = yield this.authCommandService.newPasswordRecoveryConfirmation(req.body);
             if (confirmationResult.statusCode !== http_statuses_1.HttpStatus.NoContent) {
                 console.error("Error description: ", confirmationResult === null || confirmationResult === void 0 ? void 0 : confirmationResult.statusDescription, JSON.stringify(confirmationResult.errorsMessages));
                 return res
@@ -79,7 +92,9 @@ class AuthHandler {
                 console.error("Error description: ", resentConfirmationResult === null || resentConfirmationResult === void 0 ? void 0 : resentConfirmationResult.statusDescription, JSON.stringify(resentConfirmationResult.errorsMessages));
                 return res
                     .status(resentConfirmationResult.statusCode)
-                    .send({ errorsMessages: resentConfirmationResult.errorsMessages });
+                    .send({
+                    errorsMessages: resentConfirmationResult.errorsMessages,
+                });
             }
             return res.sendStatus(http_statuses_1.HttpStatus.NoContent);
         });
@@ -96,7 +111,10 @@ class AuthHandler {
             }
             const accessToken = pairOfTokens.data.accessToken;
             const refreshToken = pairOfTokens.data.refreshToken;
-            res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: true });
+            res.cookie("refreshToken", refreshToken, {
+                httpOnly: true,
+                secure: true,
+            });
             return res.status(http_statuses_1.HttpStatus.Ok).send({ accessToken: accessToken });
         });
         this.logoutOnDemand = (req, res) => __awaiter(this, void 0, void 0, function* () {
@@ -111,8 +129,20 @@ class AuthHandler {
                 return res.sendStatus(http_statuses_1.HttpStatus.Unauthorized);
             }
         });
+        this.sendPasswordRecoveryInfo = (req, res) => __awaiter(this, void 0, void 0, function* () {
+            const sentPasswordRecoveryResult = yield this.authCommandService.sendPasswordRecoveryInfo(req.body);
+            if (sentPasswordRecoveryResult.statusCode !== http_statuses_1.HttpStatus.NoContent) {
+                console.error("Error description: ", sentPasswordRecoveryResult === null || sentPasswordRecoveryResult === void 0 ? void 0 : sentPasswordRecoveryResult.statusDescription, JSON.stringify(sentPasswordRecoveryResult.errorsMessages));
+                return res
+                    .status(sentPasswordRecoveryResult.statusCode)
+                    .send({
+                    errorsMessages: sentPasswordRecoveryResult.errorsMessages,
+                });
+            }
+            // даже в случае если такого адреса нет, чтобы не раскрывать информацию мы шлем 204
+            return res.sendStatus(http_statuses_1.HttpStatus.NoContent);
+        });
     }
-    ;
 }
 exports.AuthHandler = AuthHandler;
 // export const attemptToLogin = async (

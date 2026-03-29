@@ -30,7 +30,7 @@ exports.emailExamples = {
     }
 };
 exports.mailerService = {
-    sendConfirmationRegisterEmail(from, to, registrationCode, template) {
+    sendEmailWithCode(from, to, registrationCode, template) {
         return __awaiter(this, void 0, void 0, function* () {
             const transporter = nodemailer_1.default.createTransport({
                 host: config_1.envConfig.mailHost,
@@ -44,7 +44,7 @@ exports.mailerService = {
             const mailOptions = {
                 from: from || "\"Alex St\" <geniusb198@yandex.ru>",
                 to: to,
-                subject: "Registration confirmation",
+                subject: "Please, follow the provided link",
                 text: "Please, follow the provided link to finish Your registration.",
                 html: template(registrationCode)
             };

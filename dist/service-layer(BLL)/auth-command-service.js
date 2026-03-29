@@ -11,7 +11,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthCommandService = void 0;
 const http_statuses_1 = require("../common/http-statuses/http-statuses");
-const command_repository_1 = require("../repository-layers/command-repository-layer/command-repository");
 const mongodb_1 = require("mongodb");
 const user_class_1 = require("../common/classes/user-class");
 const mailer_service_1 = require("../adapters/email-sender/mailer-service");
@@ -19,7 +18,8 @@ const utility_token_pairs_creation_1 = require("../adapters/verification/utility
 const session_class_1 = require("../common/classes/session-class");
 const config_1 = require("../config");
 class AuthCommandService {
-    constructor(usersQueryRepository, sessionsCommandRepository, bcryptService) {
+    constructor(usersCommandRepository, usersQueryRepository, sessionsCommandRepository, bcryptService) {
+        this.usersCommandRepository = usersCommandRepository;
         this.usersQueryRepository = usersQueryRepository;
         this.sessionsCommandRepository = sessionsCommandRepository;
         this.bcryptService = bcryptService;
@@ -37,9 +37,9 @@ class AuthCommandService {
                     errorsMessages: [
                         {
                             field: "dataQueryRepository.findByLoginOrEmail", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
-                            message: "Wrong login or password",
-                        },
-                    ],
+                            message: "Wrong login or password"
+                        }
+                    ]
                 };
             }
             // если существует - проверяем что пароль верен
@@ -52,9 +52,9 @@ class AuthCommandService {
                     errorsMessages: [
                         {
                             field: "loginUser -> checkUserCredentials",
-                            message: "Wrong login or password",
-                        },
-                    ],
+                            message: "Wrong login or password"
+                        }
+                    ]
                 };
             }
             else if (isCorrectCredentials === null) {
@@ -65,9 +65,9 @@ class AuthCommandService {
                     errorsMessages: [
                         {
                             field: "loginUser -> checkUserCredentials",
-                            message: "Failed attempt to check credentials login or password",
-                        },
-                    ],
+                            message: "Failed attempt to check credentials login or password"
+                        }
+                    ]
                 };
             }
             // создаем мета данные для сессии
@@ -84,17 +84,17 @@ class AuthCommandService {
             // создаем сессию в базе
             const isSuccessfulSessionCreated = yield this.sessionsCommandRepository.createSession(tempSession);
             if (!isSuccessfulSessionCreated) {
-                console.error("Error inside loginUser -> dataCommandRepository.createSession(tempSession)");
+                console.error("Error inside loginUser -> this.sessionsCommandRepository.createSession(tempSession)");
                 return {
                     data: null,
                     statusCode: http_statuses_1.HttpStatus.InternalServerError,
-                    statusDescription: "Error inside loginUser -> dataCommandRepository.createSession(tempSession)",
+                    statusDescription: "Error inside loginUser -> this.sessionsCommandRepository.createSession(tempSession)",
                     errorsMessages: [
                         {
-                            field: "dataCommandRepository.createSession(tempSession)",
-                            message: "Error while creating session",
-                        },
-                    ],
+                            field: "this.sessionsCommandRepository.createSession(tempSession)",
+                            message: "Error while creating session"
+                        }
+                    ]
                 };
             }
             // создаем пару токенов
@@ -105,7 +105,7 @@ class AuthCommandService {
                     data: null,
                     statusCode: pairOfToken.statusCode,
                     statusDescription: pairOfToken.statusDescription,
-                    errorsMessages: pairOfToken.errorsMessages,
+                    errorsMessages: pairOfToken.errorsMessages
                 };
             }
             return pairOfToken;
@@ -115,7 +115,7 @@ class AuthCommandService {
     confirmRegistrationCode(sentData) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                return yield command_repository_1.dataCommandRepository.confirmRegistrationCode(sentData);
+                return yield this.usersCommandRepository.confirmRegistrationCode(sentData);
             }
             catch (error) {
                 return {
@@ -125,9 +125,30 @@ class AuthCommandService {
                     errorsMessages: [
                         {
                             field: "",
-                            message: "Unknown error",
-                        },
-                    ],
+                            message: "Unknown error"
+                        }
+                    ]
+                };
+            }
+        });
+    }
+    // пробуем сравнить присланный код-восстановления с имеющимся в базе и обновить хэш пароля
+    newPasswordRecoveryConfirmation(sentData) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                return yield this.usersCommandRepository.confirmPasswordRecoveryCode(sentData);
+            }
+            catch (error) {
+                return {
+                    data: null,
+                    statusCode: http_statuses_1.HttpStatus.InternalServerError,
+                    statusDescription: "Unknown error in AuthCommandService -> newPasswordRecoveryConfirmation",
+                    errorsMessages: [
+                        {
+                            field: "",
+                            message: "Unknown error"
+                        }
+                    ]
                 };
             }
         });
@@ -136,8 +157,8 @@ class AuthCommandService {
     registerNewUser(sentData) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const ifUserLoginExists = yield command_repository_1.dataCommandRepository.findByLoginOrEmail(sentData.login);
-                const ifUserEmailExists = yield command_repository_1.dataCommandRepository.findByLoginOrEmail(sentData.email);
+                const ifUserLoginExists = yield this.usersCommandRepository.findByLoginOrEmail(sentData.login);
+                const ifUserEmailExists = yield this.usersCommandRepository.findByLoginOrEmail(sentData.email);
                 if (ifUserLoginExists) {
                     return {
                         data: null,
@@ -146,9 +167,9 @@ class AuthCommandService {
                         errorsMessages: [
                             {
                                 field: "AuthCommandService -> registerNewUser -> if(ifUserLoginExists)",
-                                message: "Email or Login already exists!!!",
-                            },
-                        ],
+                                message: "Email or Login already exists!!!"
+                            }
+                        ]
                     };
                 }
                 if (ifUserEmailExists) {
@@ -159,9 +180,9 @@ class AuthCommandService {
                         errorsMessages: [
                             {
                                 field: "email",
-                                message: "Email or Login already exists!!!",
-                            },
-                        ],
+                                message: "Email or Login already exists!!!"
+                            }
+                        ]
                     };
                 }
                 const passwordHash = yield this.bcryptService.generateHash(sentData.password);
@@ -173,9 +194,9 @@ class AuthCommandService {
                         errorsMessages: [
                             {
                                 field: "bcryptService.generateHash",
-                                message: "Generating hash error",
-                            },
-                        ],
+                                message: "Generating hash error"
+                            }
+                        ]
                     };
                 }
                 const tempId = new mongodb_1.ObjectId();
@@ -193,13 +214,13 @@ class AuthCommandService {
                 //     createdAt: new Date(),
                 // } as UserCollectionStorageModel;
                 const newUserEntry = new user_class_1.User(sentData.login, sentData.email, passwordHash, tempId);
-                const newUserInsertionResult = yield command_repository_1.dataCommandRepository.registerNewUser(newUserEntry);
+                const newUserInsertionResult = yield this.usersCommandRepository.registerNewUser(newUserEntry);
                 if (newUserInsertionResult.statusCode !== http_statuses_1.HttpStatus.Ok) {
                     return {
                         data: newUserInsertionResult.data,
                         statusCode: newUserInsertionResult.statusCode,
                         statusDescription: newUserInsertionResult.statusDescription,
-                        errorsMessages: newUserInsertionResult.errorsMessages,
+                        errorsMessages: newUserInsertionResult.errorsMessages
                     };
                 }
                 // здесь отсылка письма. с точки зрения обработки потенциальных ошибок
@@ -209,7 +230,7 @@ class AuthCommandService {
                 // так делается чтобы не брать на себя лишней работы, т.к. в случае реальной проблемы с сервисом отправки мы так или иначе будем это чинить
                 // а если письмо просто потерялось или юзер тупит - для нас это может быть куча лишней работы по обслуживанию непонятно чего
                 // так что во втором случае пусть юзер сам лучше на себя возьмет это работу - просто повторно отправит если что запррос, нам главно оптимально подобрать период удалления неподтвержденных данных (минут 15-30)
-                const sendingResult = yield mailer_service_1.mailerService.sendConfirmationRegisterEmail('"Alex St" <geniusb198@yandex.ru>', newUserEntry.email, newUserEntry.emailConfirmation.confirmationCode, mailer_service_1.emailExamples.registrationEmail);
+                const sendingResult = yield mailer_service_1.mailerService.sendEmailWithCode("\"Alex St\" <geniusb198@yandex.ru>", newUserEntry.email, newUserEntry.emailConfirmation.confirmationCode, mailer_service_1.emailExamples.registrationEmail);
                 let status = "Sending went without problems, awaiting confirmation form user";
                 if (!sendingResult) {
                     console.error("Something went wrong while sending the registration email");
@@ -224,9 +245,9 @@ class AuthCommandService {
                     errorsMessages: [
                         {
                             field: "",
-                            message: "",
-                        },
-                    ],
+                            message: ""
+                        }
+                    ]
                 };
             }
             catch (error) {
@@ -237,9 +258,9 @@ class AuthCommandService {
                     errorsMessages: [
                         {
                             field: "",
-                            message: "Unknown error",
-                        },
-                    ],
+                            message: "Unknown error"
+                        }
+                    ]
                 };
             }
         });
@@ -250,21 +271,21 @@ class AuthCommandService {
             try {
                 // const allUsersList = await dataCommandRepository.findAllUsers();
                 // console.log("DEBUG: ", allUsersList);
-                const isUserInDatabase = yield command_repository_1.dataCommandRepository.findNotConfirmedByEmail(sentData.email);
+                const isUserInDatabase = yield this.usersCommandRepository.findNotConfirmedByEmail(sentData.email);
                 if (!isUserInDatabase) {
                     return {
                         data: null,
                         statusCode: http_statuses_1.HttpStatus.BadRequest,
-                        statusDescription: "AuthCommandService -> resendConfirmRegistrationCode -> if (isUserInDatabase)",
+                        statusDescription: "AuthCommandService -> resendConfirmRegistrationCode -> if (!isUserInDatabase)",
                         errorsMessages: [
                             {
                                 field: "email",
-                                message: "Email doesn't exist or already confirmed",
-                            },
-                        ],
+                                message: "Email doesn't exist or already confirmed"
+                            }
+                        ]
                     };
                 }
-                return yield command_repository_1.dataCommandRepository.resendConfirmRegistrationCode(sentData, isUserInDatabase);
+                return yield this.usersCommandRepository.resendConfirmRegistrationCode(sentData, isUserInDatabase);
             }
             catch (error) {
                 return {
@@ -274,9 +295,9 @@ class AuthCommandService {
                     errorsMessages: [
                         {
                             field: "",
-                            message: "Unknown error",
-                        },
-                    ],
+                            message: "Unknown error"
+                        }
+                    ]
                 };
             }
         });
@@ -303,10 +324,10 @@ class AuthCommandService {
                     statusDescription: "Couldn't update session data",
                     errorsMessages: [
                         {
-                            field: "AuthCommandService -> refreshTokenOnDemand -> dataCommandRepository.updateSession(expiresAt, issuedAt, sessionId)",
-                            message: "Couldn't update session data",
-                        },
-                    ],
+                            field: "AuthCommandService -> refreshTokenOnDemand -> this.sessionsCommandRepository.updateSession(expiresAt, issuedAt, sessionId)",
+                            message: "Couldn't update session data"
+                        }
+                    ]
                 };
             }
             // создаем новые токены
@@ -318,7 +339,7 @@ class AuthCommandService {
                     data: null,
                     statusCode: pairOfToken.statusCode,
                     statusDescription: pairOfToken.statusDescription,
-                    errorsMessages: pairOfToken.errorsMessages,
+                    errorsMessages: pairOfToken.errorsMessages
                 };
             }
             // const createdAtOldToken =
@@ -363,6 +384,42 @@ class AuthCommandService {
             //     });
             const ifLoggedOutSuccessfully = yield this.sessionsCommandRepository.removeSessionBySessionId(sessionId);
             return ifLoggedOutSuccessfully;
+        });
+    }
+    sendPasswordRecoveryInfo(sentData) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                // const allUsersList = await dataCommandRepository.findAllUsers();
+                // console.log("DEBUG: ", allUsersList);
+                const isUserInDatabase = yield this.usersCommandRepository.findConfirmedByEmail(sentData.email);
+                if (!isUserInDatabase) {
+                    return {
+                        data: null,
+                        statusCode: http_statuses_1.HttpStatus.NoContent,
+                        statusDescription: "AuthCommandService -> sendPasswordRecoveryInfo -> if (!isUserInDatabase) ",
+                        errorsMessages: [
+                            {
+                                field: "email",
+                                message: "Email doesn't exist or already confirmed"
+                            }
+                        ]
+                    };
+                }
+                return yield this.usersCommandRepository.sendPasswordRecoveryInfo(sentData, isUserInDatabase);
+            }
+            catch (error) {
+                return {
+                    data: null,
+                    statusCode: http_statuses_1.HttpStatus.InternalServerError,
+                    statusDescription: "Unknown error in AuthCommandService -> sendPasswordRecoveryInfo",
+                    errorsMessages: [
+                        {
+                            field: "",
+                            message: "Unknown error"
+                        }
+                    ]
+                };
+            }
         });
     }
     // вспомогательная функция
@@ -618,7 +675,7 @@ exports.AuthCommandService = AuthCommandService;
 //             // так что во втором случае пусть юзер сам лучше на себя возьмет это работу - просто повторно отправит если что запррос, нам главно оптимально подобрать период удалления неподтвержденных данных (минут 15-30)
 //
 //             const sendingResult =
-//                 await mailerService.sendConfirmationRegisterEmail(
+//                 await mailerService.sendEmailWithCode(
 //                     '"Alex St" <geniusb198@yandex.ru>',
 //                     newUserEntry.email,
 //                     newUserEntry.emailConfirmation.confirmationCode,

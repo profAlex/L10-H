@@ -16,8 +16,6 @@ const mongo_db_1 = require("../../db/mongo.db");
 const mongodb_1 = require("mongodb");
 const custom_error_class_1 = require("../utility/custom-error-class");
 const http_statuses_1 = require("../../common/http-statuses/http-statuses");
-const mailer_service_1 = require("../../adapters/email-sender/mailer-service");
-const node_crypto_1 = require("node:crypto");
 function findBlogByPrimaryKey(id) {
     return __awaiter(this, void 0, void 0, function* () {
         return mongo_db_1.bloggersCollection.findOne({ _id: id });
@@ -703,272 +701,592 @@ exports.dataCommandRepository = {
     // *****************************
     // методы для управления регистрацией новых пользователей
     // *****************************
-    confirmRegistrationCode(sentConfirmationCode) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                // const searchResult = await usersCollection
-                //     .aggregate([
-                //         {
-                //             $match: {
-                //                 "emailConfirmation.confirmationCode":
-                //                     sentConfirmationCode.code,
-                //                 "emailConfirmation.expirationDate": {
-                //                     $gt: new Date(),
-                //                 },
-                //                 "emailConfirmation.isConfirmed": false,
-                //             },
-                //         },
-                //         {
-                //             $project: {
-                //                 _id: 1,
-                //             },
-                //         },
-                //     ])
-                //     .toArray();
-                const searchResult = yield mongo_db_1.usersCollection.findOne({
-                    "emailConfirmation.confirmationCode": sentConfirmationCode.code,
-                    "emailConfirmation.expirationDate": { $gt: new Date() },
-                    "emailConfirmation.isConfirmed": false,
-                }, { projection: { _id: 1 } });
-                // console.log("ALL USERS: ", searchResult);
-                // console.log(
-                //     "ARRAY LENGTH HERE <-------------",
-                //     searchResult.length
-                // );
-                //
-                // console.log(
-                //     "FOUND HERE <-------------",
-                //     searchResult[0]._id.toString()
-                // );
-                // aggregate() всегда возвращает массив!
-                if (searchResult) {
-                    const updateResult = yield mongo_db_1.usersCollection.updateOne({ _id: searchResult._id }, {
-                        $set: {
-                            "emailConfirmation.confirmationCode": null,
-                            "emailConfirmation.isConfirmed": true,
-                        },
-                    });
-                    if (updateResult.acknowledged) {
-                        return {
-                            data: null,
-                            statusCode: http_statuses_1.HttpStatus.NoContent,
-                            statusDescription: "Successfully confirmed user",
-                            errorsMessages: [
-                                {
-                                    field: "",
-                                    message: "",
-                                },
-                            ],
-                        };
-                    }
-                    // не смогли обновить юзера
-                    return {
-                        data: null,
-                        statusCode: http_statuses_1.HttpStatus.InternalServerError,
-                        statusDescription: "Couldn't confirm user: dataCommandRepository -> confirmRegistrationCode",
-                        errorsMessages: [
-                            {
-                                field: "",
-                                message: "Couldn't confirm user",
-                            },
-                        ],
-                    };
-                }
-                // юзер не был найден или просрочен
-                return {
-                    data: null,
-                    statusCode: http_statuses_1.HttpStatus.BadRequest,
-                    statusDescription: "Couldn't confirm user: dataCommandRepository -> confirmRegistrationCode",
-                    errorsMessages: [
-                        {
-                            field: "code",
-                            message: "Couldn't confirm user - not existent or out of date",
-                        },
-                    ],
-                };
-            }
-            catch (error) {
-                // непредвиденная ошибка
-                return {
-                    data: null,
-                    statusCode: http_statuses_1.HttpStatus.InternalServerError,
-                    statusDescription: "dataCommandRepository -> confirmRegistrationCode",
-                    errorsMessages: [
-                        {
-                            field: "",
-                            message: "Unknown error",
-                        },
-                    ],
-                };
-            }
-        });
-    },
-    registerNewUser(sentNewUser) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const result = yield mongo_db_1.usersCollection.insertOne(sentNewUser);
-                // newUserEntry.emailConfirmation.isConfirmed = true; // для созданных админом пользователей подтверждения не нужно
-                if (!result.acknowledged) {
-                    return {
-                        data: null,
-                        statusCode: http_statuses_1.HttpStatus.InternalServerError,
-                        statusDescription: "",
-                        errorsMessages: [
-                            {
-                                field: "dataCommandRepository -> registerNewUser -> usersCollection.insertOne(newUserEntry)",
-                                message: "attempt to insert new user entry failed",
-                            },
-                        ],
-                    };
-                }
-                return {
-                    data: null,
-                    statusCode: http_statuses_1.HttpStatus.Ok,
-                    statusDescription: "dataCommandRepository -> registerNewUser -> usersCollection.insertOne(newUserEntry)",
-                    errorsMessages: [
-                        {
-                            field: "",
-                            message: "Unknown error",
-                        },
-                    ],
-                };
-            }
-            catch (error) {
-                return {
-                    data: null,
-                    statusCode: http_statuses_1.HttpStatus.InternalServerError,
-                    statusDescription: "dataCommandRepository -> registerNewUser -> usersCollection.insertOne(newUserEntry)",
-                    errorsMessages: [
-                        {
-                            field: "",
-                            message: `Unknown error: ${error}`,
-                        },
-                    ],
-                };
-            }
-        });
-    },
-    resendConfirmRegistrationCode(sentEmailData, userId) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                // console.log(
-                //     "<--------------",
-                //     userId.toString()
-                // );
-                const userEntry = yield mongo_db_1.usersCollection.findOne({ _id: userId }); // очень важно!! обязательнь указывать поле по которому идет поиск! '_id:', без него может не найти, хотя ошибку синтаксически не покажет
-                if (!userEntry) {
-                    return {
-                        data: null,
-                        statusCode: http_statuses_1.HttpStatus.InternalServerError,
-                        statusDescription: "",
-                        errorsMessages: [
-                            {
-                                field: "resendConfirmRegistrationCode -> usersCollection.findOne({ userId })",
-                                message: "User not found",
-                            },
-                        ],
-                    };
-                }
-                const newConfirmationCode = (0, node_crypto_1.randomUUID)();
-                // userEntry.emailConfirmation.confirmationCode = newConfirmationCode;
-                // userEntry.emailConfirmation.expirationDate = new Date(new Date().setMinutes(new Date().getMinutes() + 30));
-                // const result = await usersCollection.insertOne(newUserEntry);
-                // newUserEntry.emailConfirmation.isConfirmed = true; // для созданных админом пользователей подтверждения не нужно
-                const result = yield mongo_db_1.usersCollection.updateOne({ _id: userId }, {
-                    $set: {
-                        "emailConfirmation.confirmationCode": newConfirmationCode,
-                        "emailConfirmation.expirationDate": new Date(new Date().setDate(new Date().getMinutes() + 30)),
-                    },
-                });
-                if (!result.acknowledged) {
-                    return {
-                        data: null,
-                        statusCode: http_statuses_1.HttpStatus.InternalServerError,
-                        statusDescription: "",
-                        errorsMessages: [
-                            {
-                                field: "dataCommandRepository -> resendConfirmRegistrationCode -> usersCollection.updateOne",
-                                message: "attempt to update user entry failed",
-                            },
-                        ],
-                    };
-                }
-                // здесь отсылка письма. с точки зрения обработки потенциальных ошибок
-                // максимум того что целесообразно сделать, это в том случае если по какой-то причине с нашей стороны чтото сломалось
-                // никак не говорить об этом юзерам, пускай они самостоятельно повторно отправляют запрос, мы максимум логируем ошибку
-                // тут жестко будет связано с политикой компании по этому поводу
-                // так делается чтобы не брать на себя лишней работы, т.к. в случае реальной проблемы с сервисом отправки мы так или иначе будем это чинить
-                // а если письмо просто потерялось или юзер тупит - для нас это может быть куча лишней работы по обслуживанию непонятно чего
-                // так что во втором случае пусть юзер сам лучше на себя возьмет это работу - просто повторно отправит если что запррос, нам главно оптимально подобрать период удалления неподтвержденных данных (минут 15-30)
-                const resendingResult = yield mailer_service_1.mailerService.sendConfirmationRegisterEmail('"Alex St" <geniusb198@yandex.ru>', sentEmailData.email, newConfirmationCode, mailer_service_1.emailExamples.registrationEmail);
-                let status = "Resending went without problems, awaiting confirmation form user";
-                if (!resendingResult) {
-                    console.error("Something went while resending the registration email");
-                    status =
-                        "Something went wrong while resending the registration email";
-                }
-                // отправка результата - все ОК
-                return {
-                    data: null,
-                    statusCode: http_statuses_1.HttpStatus.NoContent,
-                    statusDescription: status,
-                    errorsMessages: [
-                        {
-                            field: "",
-                            message: "",
-                        },
-                    ],
-                };
-            }
-            catch (error) {
-                return {
-                    data: null,
-                    statusCode: http_statuses_1.HttpStatus.InternalServerError,
-                    statusDescription: "dataCommandRepository -> resendConfirmRegistrationCode -> usersCollection.updateOne",
-                    errorsMessages: [
-                        {
-                            field: "",
-                            message: "Unknown error",
-                        },
-                    ],
-                };
-            }
-        });
-    },
-    findByLoginOrEmail(loginOrEmail) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const user = yield mongo_db_1.usersCollection.findOne({
-                    //"emailConfirmation.isConfirmed": false,
-                    $or: [{ email: loginOrEmail }, { login: loginOrEmail }],
-                }, 
-                // т.к. нам не нужны все данные по юзеру, то оптимизируем - запрашиваем только _id
-                { projection: { _id: 1 } });
-                return !!user;
-            }
-            catch (error) {
-                // не оптимально, но пока не унифицирован подход к обработке ошибок - оставляем
-                console.error("Internal DB error in dataCommandRepository -> findByLoginOrEmail:", error);
-                return false;
-            }
-        });
-    },
-    findNotConfirmedByEmail(email) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const user = yield mongo_db_1.usersCollection.findOne({
-                    "emailConfirmation.isConfirmed": false,
-                    email: email,
-                }, { projection: { _id: 1 } });
-                return user ? user._id : null;
-            }
-            catch (error) {
-                // не оптимально, но пока не унифицирован подход к обработке ошибок - оставляем
-                console.error("Internal DB error in dataCommandRepository -> findNotConfirmedByEmail:", error);
-                return null;
-            }
-        });
-    },
+    // async confirmRegistrationCode(
+    //     sentConfirmationData: RegistrationConfirmationInput,
+    // ): Promise<CustomResult> {
+    //     try {
+    //         // const searchResult = await usersCollection
+    //         //     .aggregate([
+    //         //         {
+    //         //             $match: {
+    //         //                 "emailConfirmation.confirmationCode":
+    //         //                     sentConfirmationData.code,
+    //         //                 "emailConfirmation.expirationDate": {
+    //         //                     $gt: new Date(),
+    //         //                 },
+    //         //                 "emailConfirmation.isConfirmed": false,
+    //         //             },
+    //         //         },
+    //         //         {
+    //         //             $project: {
+    //         //                 _id: 1,
+    //         //             },
+    //         //         },
+    //         //     ])
+    //         //     .toArray();
+    //
+    //         const searchResult = await usersCollection.findOne(
+    //             {
+    //                 "emailConfirmation.confirmationCode":
+    //                     sentConfirmationData.code,
+    //                 "emailConfirmation.expirationDate": { $gt: new Date() },
+    //                 "emailConfirmation.isConfirmed": false,
+    //             },
+    //             { projection: { _id: 1 } },
+    //         );
+    //
+    //         // console.log("ALL USERS: ", searchResult);
+    //         // console.log(
+    //         //     "ARRAY LENGTH HERE <-------------",
+    //         //     searchResult.length
+    //         // );
+    //         //
+    //         // console.log(
+    //         //     "FOUND HERE <-------------",
+    //         //     searchResult[0]._id.toString()
+    //         // );
+    //
+    //         // aggregate() всегда возвращает массив!
+    //
+    //         if (searchResult) {
+    //             const updateResult = await usersCollection.updateOne(
+    //                 { _id: searchResult._id },
+    //                 {
+    //                     $set: {
+    //                         "emailConfirmation.confirmationCode": null,
+    //                         "emailConfirmation.isConfirmed": true,
+    //                     },
+    //                 },
+    //             );
+    //
+    //             if (updateResult.acknowledged) {
+    //                 return {
+    //                     data: null,
+    //                     statusCode: HttpStatus.NoContent,
+    //                     statusDescription: "Successfully confirmed user",
+    //                     errorsMessages: [
+    //                         {
+    //                             field: "",
+    //                             message: "",
+    //                         },
+    //                     ],
+    //                 };
+    //             }
+    //
+    //             // не смогли обновить юзера
+    //             return {
+    //                 data: null,
+    //                 statusCode: HttpStatus.InternalServerError,
+    //                 statusDescription:
+    //                     "Couldn't confirm user: dataCommandRepository -> confirmRegistrationCode",
+    //                 errorsMessages: [
+    //                     {
+    //                         field: "",
+    //                         message: "Couldn't confirm user",
+    //                     },
+    //                 ],
+    //             };
+    //         }
+    //
+    //         // юзер не был найден или просрочен
+    //         return {
+    //             data: null,
+    //             statusCode: HttpStatus.BadRequest,
+    //             statusDescription:
+    //                 "Couldn't confirm user: dataCommandRepository -> confirmRegistrationCode",
+    //             errorsMessages: [
+    //                 {
+    //                     field: "code",
+    //                     message:
+    //                         "Couldn't confirm user - not existent or out of date",
+    //                 },
+    //             ],
+    //         };
+    //     } catch (error) {
+    //         // непредвиденная ошибка
+    //         return {
+    //             data: null,
+    //             statusCode: HttpStatus.InternalServerError,
+    //             statusDescription:
+    //                 "dataCommandRepository -> confirmRegistrationCode",
+    //             errorsMessages: [
+    //                 {
+    //                     field: "",
+    //                     message: "Unknown error",
+    //                 },
+    //             ],
+    //         };
+    //     }
+    // },
+    // async confirmPasswordRecoveryCode(
+    //     sentConfirmationData: NewPasswordRecoveryInputModel,
+    // ): Promise<CustomResult> {
+    //     try {
+    //         // const searchResult = await usersCollection
+    //         //     .aggregate([
+    //         //         {
+    //         //             $match: {
+    //         //                 "emailConfirmation.confirmationCode":
+    //         //                     sentConfirmationData.code,
+    //         //                 "emailConfirmation.expirationDate": {
+    //         //                     $gt: new Date(),
+    //         //                 },
+    //         //                 "emailConfirmation.isConfirmed": false,
+    //         //             },
+    //         //         },
+    //         //         {
+    //         //             $project: {
+    //         //                 _id: 1,
+    //         //             },
+    //         //         },
+    //         //     ])
+    //         //     .toArray();
+    //
+    //         const searchResult = await usersCollection.findOne(
+    //             {
+    //                 "passwordRecoveryInformation.passwordRecoveryCode":
+    //                 sentConfirmationData.recoveryCode,
+    //                 "passwordRecoveryInformation.expirationDate": { $gt: new Date() },
+    //                 "passwordRecoveryInformation.isRecoveryInAction": true,
+    //             },
+    //             { projection: { _id: 1 } },
+    //         );
+    //
+    //         // console.log("ALL USERS: ", searchResult);
+    //         // console.log(
+    //         //     "ARRAY LENGTH HERE <-------------",
+    //         //     searchResult.length
+    //         // );
+    //         //
+    //         // console.log(
+    //         //     "FOUND HERE <-------------",
+    //         //     searchResult[0]._id.toString()
+    //         // );
+    //
+    //         // aggregate() всегда возвращает массив!
+    //
+    //         if (searchResult) {
+    //             // если юзер с заданными характеристиками нашелся - генерируем новый хэш для пароля и пробуем обновить его
+    //             const newPasswordHash = await bcryptService.generateHash(
+    //                 sentConfirmationData.newPassword
+    //             );
+    //
+    //             if (!newPasswordHash) {
+    //                 return {
+    //                     data: null,
+    //                     statusCode: HttpStatus.InternalServerError,
+    //                     statusDescription: "Error inside dataCommandRepository -> confirmPasswordRecoveryCode -> bcryptService.generateHash",
+    //                     errorsMessages: [
+    //                         {
+    //                             field: "bcryptService.generateHash",
+    //                             message: "Generating hash error"
+    //                         }
+    //                     ]
+    //                 };
+    //             }
+    //
+    //             const updateResult = await usersCollection.updateOne(
+    //                 { _id: searchResult._id },
+    //                 {
+    //                     $set: {
+    //                         passwordHash: newPasswordHash,
+    //                         "passwordRecoveryInformation.confirmationCode": null,
+    //                         "passwordRecoveryInformation.isRecoveryInAction": false,
+    //                     },
+    //                 },
+    //             );
+    //
+    //             if (updateResult.acknowledged) {
+    //                 return {
+    //                     data: null,
+    //                     statusCode: HttpStatus.NoContent,
+    //                     statusDescription: "Successfully confirmed new password",
+    //                     errorsMessages: [
+    //                         {
+    //                             field: "",
+    //                             message: "",
+    //                         },
+    //                     ],
+    //                 };
+    //             }
+    //
+    //             // не смогли обновить данные нового пароля
+    //             return {
+    //                 data: null,
+    //                 statusCode: HttpStatus.InternalServerError,
+    //                 statusDescription:
+    //                     "Couldn't confirm new password: dataCommandRepository -> confirmPasswordRecoveryCode",
+    //                 errorsMessages: [
+    //                     {
+    //                         field: "",
+    //                         message: "Couldn't confirm password",
+    //                     },
+    //                 ],
+    //             };
+    //         }
+    //
+    //         // юзер не был найден или просрочен
+    //         return {
+    //             data: null,
+    //             statusCode: HttpStatus.BadRequest,
+    //             statusDescription:
+    //                 "Couldn't confirm new password: dataCommandRepository -> confirmPasswordRecoveryCode",
+    //             errorsMessages: [
+    //                 {
+    //                     field: "code",
+    //                     message:
+    //                         "Couldn't confirm new password - not existent or out of date",
+    //                 },
+    //             ],
+    //         };
+    //     } catch (error) {
+    //         // непредвиденная ошибка
+    //         return {
+    //             data: null,
+    //             statusCode: HttpStatus.InternalServerError,
+    //             statusDescription:
+    //                 "dataCommandRepository -> confirmPasswordRecoveryCode",
+    //             errorsMessages: [
+    //                 {
+    //                     field: "",
+    //                     message: "Unknown error",
+    //                 },
+    //             ],
+    //         };
+    //     }
+    // },
+    // async registerNewUser(sentNewUser: User): Promise<CustomResult> {
+    //     try {
+    //         const result = await usersCollection.insertOne(sentNewUser);
+    //         // newUserEntry.emailConfirmation.isConfirmed = true; // для созданных админом пользователей подтверждения не нужно
+    //
+    //         if (!result.acknowledged) {
+    //             return {
+    //                 data: null,
+    //                 statusCode: HttpStatus.InternalServerError,
+    //                 statusDescription: "",
+    //                 errorsMessages: [
+    //                     {
+    //                         field: "dataCommandRepository -> registerNewUser -> usersCollection.insertOne(newUserEntry)",
+    //                         message: "attempt to insert new user entry failed",
+    //                     },
+    //                 ],
+    //             };
+    //         }
+    //
+    //         return {
+    //             data: null,
+    //             statusCode: HttpStatus.Ok,
+    //             statusDescription:
+    //                 "dataCommandRepository -> registerNewUser -> usersCollection.insertOne(newUserEntry)",
+    //             errorsMessages: [
+    //                 {
+    //                     field: "",
+    //                     message: "Unknown error",
+    //                 },
+    //             ],
+    //         };
+    //     } catch (error) {
+    //         return {
+    //             data: null,
+    //             statusCode: HttpStatus.InternalServerError,
+    //             statusDescription:
+    //                 "dataCommandRepository -> registerNewUser -> usersCollection.insertOne(newUserEntry)",
+    //             errorsMessages: [
+    //                 {
+    //                     field: "",
+    //                     message: `Unknown error: ${error}`,
+    //                 },
+    //             ],
+    //         };
+    //     }
+    // },
+    // async resendConfirmRegistrationCode(
+    //     sentEmailData: ResentRegistrationConfirmationInput,
+    //     userId: ObjectId,
+    // ): Promise<CustomResult> {
+    //     try {
+    //         // console.log(
+    //         //     "<--------------",
+    //         //     userId.toString()
+    //         // );
+    //
+    //         const userEntry = await usersCollection.findOne({ _id: userId }); // очень важно!! обязательнь указывать поле по которому идет поиск! '_id:', без него может не найти, хотя ошибку синтаксически не покажет
+    //
+    //         if (!userEntry) {
+    //             return {
+    //                 data: null,
+    //                 statusCode: HttpStatus.InternalServerError,
+    //                 statusDescription: "",
+    //                 errorsMessages: [
+    //                     {
+    //                         field: "resendConfirmRegistrationCode -> usersCollection.findOne({ userId })",
+    //                         message: "User not found",
+    //                     },
+    //                 ],
+    //             };
+    //         }
+    //
+    //         const newConfirmationCode = randomUUID();
+    //         // userEntry.emailConfirmation.confirmationCode = newConfirmationCode;
+    //         // userEntry.emailConfirmation.expirationDate = new Date(new Date().setMinutes(new Date().getMinutes() + 30));
+    //
+    //         // const result = await usersCollection.insertOne(newUserEntry);
+    //         // newUserEntry.emailConfirmation.isConfirmed = true; // для созданных админом пользователей подтверждения не нужно
+    //
+    //         const result = await usersCollection.updateOne(
+    //             { _id: userId },
+    //             {
+    //                 $set: {
+    //                     "emailConfirmation.confirmationCode":
+    //                         newConfirmationCode,
+    //                     "emailConfirmation.expirationDate": new Date(
+    //                         new Date().setDate(new Date().getMinutes() + 30),
+    //                     ),
+    //                 },
+    //             },
+    //         );
+    //
+    //         if (!result.acknowledged) {
+    //             return {
+    //                 data: null,
+    //                 statusCode: HttpStatus.InternalServerError,
+    //                 statusDescription: "",
+    //                 errorsMessages: [
+    //                     {
+    //                         field: "dataCommandRepository -> resendConfirmRegistrationCode -> usersCollection.updateOne",
+    //                         message: "attempt to update user entry failed",
+    //                     },
+    //                 ],
+    //             };
+    //         }
+    //
+    //         // здесь отсылка письма. с точки зрения обработки потенциальных ошибок
+    //         // максимум того что целесообразно сделать, это в том случае если по какой-то причине с нашей стороны чтото сломалось
+    //         // никак не говорить об этом юзерам, пускай они самостоятельно повторно отправляют запрос, мы максимум логируем ошибку
+    //         // тут жестко будет связано с политикой компании по этому поводу
+    //         // так делается чтобы не брать на себя лишней работы, т.к. в случае реальной проблемы с сервисом отправки мы так или иначе будем это чинить
+    //         // а если письмо просто потерялось или юзер тупит - для нас это может быть куча лишней работы по обслуживанию непонятно чего
+    //         // так что во втором случае пусть юзер сам лучше на себя возьмет это работу - просто повторно отправит если что запррос, нам главно оптимально подобрать период удалления неподтвержденных данных (минут 15-30)
+    //
+    //         const resendingResult =
+    //             await mailerService.sendEmailWithCode(
+    //                 '"Alex St" <geniusb198@yandex.ru>',
+    //                 sentEmailData.email,
+    //                 newConfirmationCode,
+    //                 emailExamples.registrationEmail,
+    //             );
+    //
+    //         let status =
+    //             "Resending went without problems, awaiting confirmation form user";
+    //         if (!resendingResult) {
+    //             console.error(
+    //                 "Something went while resending the registration email",
+    //             );
+    //             status =
+    //                 "Something went wrong while resending the registration email";
+    //         }
+    //
+    //         // отправка результата - все ОК
+    //         return {
+    //             data: null,
+    //             statusCode: HttpStatus.NoContent,
+    //             statusDescription: status,
+    //             errorsMessages: [
+    //                 {
+    //                     field: "",
+    //                     message: "",
+    //                 },
+    //             ],
+    //         };
+    //     } catch (error) {
+    //         return {
+    //             data: null,
+    //             statusCode: HttpStatus.InternalServerError,
+    //             statusDescription:
+    //                 "dataCommandRepository -> resendConfirmRegistrationCode",
+    //             errorsMessages: [
+    //                 {
+    //                     field: "",
+    //                     message: "Unknown error",
+    //                 },
+    //             ],
+    //         };
+    //     }
+    // },
+    // async sendPasswordRecoveryInfo(
+    //     sentEmailData: PasswordRecoveryInputModel,
+    //     userId: ObjectId,
+    // ): Promise<CustomResult> {
+    //     try {
+    //         // console.log(
+    //         //     "<--------------",
+    //         //     userId.toString()
+    //         // );
+    //
+    //         const userEntry = await usersCollection.findOne({ _id: userId }); // очень важно!! обязательнь указывать поле по которому идет поиск! '_id:', без него может не найти, хотя ошибку синтаксически не покажет
+    //
+    //         if (!userEntry) {
+    //             return {
+    //                 data: null,
+    //                 statusCode: HttpStatus.InternalServerError,
+    //                 statusDescription: "",
+    //                 errorsMessages: [
+    //                     {
+    //                         field: "sendPasswordRecoveryInfo -> usersCollection.findOne({ userId })",
+    //                         message: "User not found",
+    //                     },
+    //                 ],
+    //             };
+    //         }
+    //
+    //         const newRecoveryCode = randomUUID();
+    //
+    //         const result = await usersCollection.updateOne(
+    //             { _id: userId },
+    //             {
+    //                 $set: {
+    //                     "passwordRecoveryInformation.passwordRecoveryCode":
+    //                         newRecoveryCode,
+    //                     "passwordRecoveryInformation.expirationDate": new Date(
+    //                         new Date().setDate(new Date().getMinutes() + 3000), // здесь значение 3000 просто специально оч большое, вообще этой функциональности не было заложено в ТЗ, заложил ее на будущее, можно и убрать
+    //                     ),
+    //                     "passwordRecoveryInformation.isRecoveryInAction": true,
+    //                 },
+    //             },
+    //         );
+    //
+    //         if (!result.acknowledged) {
+    //             return {
+    //                 data: null,
+    //                 statusCode: HttpStatus.InternalServerError,
+    //                 statusDescription: "",
+    //                 errorsMessages: [
+    //                     {
+    //                         field: "dataCommandRepository -> sendPasswordRecoveryInfo -> usersCollection.updateOne",
+    //                         message: "attempt to update user entry failed",
+    //                     },
+    //                 ],
+    //             };
+    //         }
+    //
+    //         // здесь отсылка письма. с точки зрения обработки потенциальных ошибок
+    //         // максимум того что целесообразно сделать, это в том случае если по какой-то причине с нашей стороны чтото сломалось
+    //         // никак не говорить об этом юзерам, пускай они самостоятельно повторно отправляют запрос, мы максимум логируем ошибку
+    //         // тут жестко будет связано с политикой компании по этому поводу
+    //         // так делается чтобы не брать на себя лишней работы, т.к. в случае реальной проблемы с сервисом отправки мы так или иначе будем это чинить
+    //         // а если письмо просто потерялось или юзер тупит - для нас это может быть куча лишней работы по обслуживанию непонятно чего
+    //         // так что во втором случае пусть юзер сам лучше на себя возьмет это работу - просто повторно отправит если что запррос, нам главно оптимально подобрать период удалления неподтвержденных данных (минут 15-30)
+    //
+    //         const sendingResult =
+    //             await mailerService.sendEmailWithCode(
+    //                 '"Alex St" <geniusb198@yandex.ru>',
+    //                 sentEmailData.email,
+    //                 newRecoveryCode,
+    //                 emailExamples.passwordRecoveryEmail,
+    //             );
+    //
+    //         let status =
+    //             "Sending recovery email went without problems, awaiting confirmation form user";
+    //         if (!sendingResult) {
+    //             console.error(
+    //                 "Something went while sending the recovery email",
+    //             );
+    //             status =
+    //                 "Something went wrong while sending the recovery email";
+    //         }
+    //
+    //         // отправка результата - все ОК
+    //         return {
+    //             data: null,
+    //             statusCode: HttpStatus.NoContent,
+    //             statusDescription: status,
+    //             errorsMessages: [
+    //                 {
+    //                     field: "",
+    //                     message: "",
+    //                 },
+    //             ],
+    //         };
+    //     } catch (error) {
+    //         return {
+    //             data: null,
+    //             statusCode: HttpStatus.InternalServerError,
+    //             statusDescription:
+    //                 "dataCommandRepository -> sendPasswordRecoveryInfo",
+    //             errorsMessages: [
+    //                 {
+    //                     field: "",
+    //                     message: "Unknown error",
+    //                 },
+    //             ],
+    //         };
+    //     }
+    // },
+    // async findByLoginOrEmail(loginOrEmail: string): Promise<boolean> {
+    //     try {
+    //         const user = await usersCollection.findOne(
+    //             {
+    //                 //"emailConfirmation.isConfirmed": false,
+    //                 $or: [{ email: loginOrEmail }, { login: loginOrEmail }],
+    //             },
+    //             // т.к. нам не нужны все данные по юзеру, то оптимизируем - запрашиваем только _id
+    //             { projection: { _id: 1 } },
+    //         );
+    //
+    //         return !!user;
+    //     } catch (error) {
+    //         // не оптимально, но пока не унифицирован подход к обработке ошибок - оставляем
+    //         console.error(
+    //             "Internal DB error in dataCommandRepository -> findByLoginOrEmail:",
+    //             error,
+    //         );
+    //
+    //         return false;
+    //     }
+    // },
+    // async findNotConfirmedByEmail(email: string): Promise<ObjectId | null> {
+    //     try {
+    //         const user = await usersCollection.findOne<{ _id: ObjectId }>(
+    //             {
+    //                 "emailConfirmation.isConfirmed": false,
+    //                 email: email,
+    //             },
+    //             { projection: { _id: 1 } }, // т.к. нам не нужны все данные по юзеру, то оптимизируем - запрашиваем только _id
+    //         );
+    //
+    //         return user ? user._id : null;
+    //     } catch (error) {
+    //         // не оптимально, но пока не унифицирован подход к обработке ошибок - оставляем
+    //         console.error(
+    //             "Internal DB error in dataCommandRepository -> findNotConfirmedByEmail:",
+    //             error,
+    //         );
+    //
+    //         return null;
+    //     }
+    // },
+    // async findConfirmedByEmail(email: string): Promise<ObjectId | null> {
+    //     try {
+    //         const user = await usersCollection.findOne<{ _id: ObjectId }>(
+    //             {
+    //                 "emailConfirmation.isConfirmed": true,
+    //                 email: email,
+    //             },
+    //             { projection: { _id: 1 } }, // т.к. нам не нужны все данные по юзеру, то оптимизируем - запрашиваем только _id
+    //         );
+    //
+    //         return user ? user._id : null;
+    //     } catch (error) {
+    //         // не оптимально, но пока не унифицирован подход к обработке ошибок - оставляем
+    //         console.error(
+    //             "Internal DB error in dataCommandRepository -> findNotConfirmedByEmail:",
+    //             error,
+    //         );
+    //
+    //         return null;
+    //     }
+    // },
     // *****************************
     // методы для управления черным списком (black list) рефреш токенов (refresh tokens) пользователей
     // *****************************
