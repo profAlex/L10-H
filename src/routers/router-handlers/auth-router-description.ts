@@ -13,10 +13,11 @@ import { RegistrationUserInputModel } from "../router-types/auth-registration-in
 import { RegistrationConfirmationInput } from "../router-types/auth-registration-confirmation-input-model";
 import { ResentRegistrationConfirmationInput } from "../router-types/auth-resent-registration-confirmation-input-model";
 import { RotationPairToken } from "../../adapters/verification/auth-token-rotation-pair";
+import { PasswordRecoveryInputModel } from "../router-types/auth-password-recovery-input-model";
+import { NewPasswordRecoveryInputModel } from "../router-types/auth-new-password-recovery-input-model";
 
 export class AuthHandler {
-
-    constructor(protected authCommandService:AuthCommandService){};
+    constructor(protected authCommandService: AuthCommandService) {}
 
     public attemptToLogin = async (
         req: RequestWithBody<AuthLoginInputModel>,
@@ -40,10 +41,13 @@ export class AuthHandler {
         const { accessToken, refreshToken, relatedUserId } = loginResult.data;
 
         // записываем данные соданного рефреш-токена в объект res для передачи при возврате
-        res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: true });
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: true,
+        });
 
         return res.status(HttpStatus.Ok).send({ accessToken: accessToken });
-    }
+    };
 
     public provideUserInfo = async (
         req: RequestWithUserId<UserIdType>,
@@ -67,7 +71,7 @@ export class AuthHandler {
         // ДОЛЖНО ИДТИ ЧЕРЕЗ СЕРВИС!
         const userInfo = await dataQueryRepository.findUserForMe(userId);
         return res.status(HttpStatus.Ok).send(userInfo);
-    }
+    };
 
     public registrationConfirmation = async (
         req: RequestWithBody<RegistrationConfirmationInput>,
@@ -89,16 +93,40 @@ export class AuthHandler {
         }
 
         return res.sendStatus(HttpStatus.NoContent);
-    }
+    };
+
+
+
+    public newPasswordRecoveryConfirmation = async (
+        req: RequestWithBody<NewPasswordRecoveryInputModel>,
+        res: Response,
+    ) => {
+        const confirmationResult: CustomResult =
+            await this.authCommandService.newPasswordRecoveryConfirmation(req.body);
+
+        if (confirmationResult.statusCode !== HttpStatus.NoContent) {
+            console.error(
+                "Error description: ",
+                confirmationResult?.statusDescription,
+                JSON.stringify(confirmationResult.errorsMessages),
+            );
+
+            return res
+                .status(confirmationResult.statusCode)
+                .send({ errorsMessages: confirmationResult.errorsMessages });
+        }
+
+        return res.sendStatus(HttpStatus.NoContent);
+    };
+
 
     public registrationAttemptByUser = async (
         req: RequestWithBody<RegistrationUserInputModel>,
         res: Response,
     ) => {
         // const { loginOrEmail, password } = req.body;
-        const registrationResult: CustomResult = await this.authCommandService.registerNewUser(
-            req.body,
-        );
+        const registrationResult: CustomResult =
+            await this.authCommandService.registerNewUser(req.body);
 
         if (
             registrationResult.statusCode !== HttpStatus.Ok &&
@@ -118,14 +146,16 @@ export class AuthHandler {
         }
 
         return res.sendStatus(HttpStatus.NoContent);
-    }
+    };
 
     public resendRegistrationConfirmation = async (
         req: RequestWithBody<ResentRegistrationConfirmationInput>,
         res: Response,
     ) => {
         const resentConfirmationResult: CustomResult =
-            await this.authCommandService.resendConfirmRegistrationCode(req.body);
+            await this.authCommandService.resendConfirmRegistrationCode(
+                req.body,
+            );
 
         if (resentConfirmationResult.statusCode !== HttpStatus.NoContent) {
             console.error(
@@ -136,11 +166,13 @@ export class AuthHandler {
 
             return res
                 .status(resentConfirmationResult.statusCode)
-                .send({ errorsMessages: resentConfirmationResult.errorsMessages });
+                .send({
+                    errorsMessages: resentConfirmationResult.errorsMessages,
+                });
         }
 
         return res.sendStatus(HttpStatus.NoContent);
-    }
+    };
 
     public refreshTokenOnDemand = async (req: Request, res: Response) => {
         const pairOfTokens = await this.authCommandService.refreshTokenOnDemand(
@@ -166,9 +198,12 @@ export class AuthHandler {
         const accessToken = pairOfTokens.data.accessToken;
         const refreshToken = pairOfTokens.data.refreshToken;
 
-        res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: true });
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: true,
+        });
         return res.status(HttpStatus.Ok).send({ accessToken: accessToken });
-    }
+    };
 
     public logoutOnDemand = async (req: Request, res: Response) => {
         // const oldRefreshToken = req.cookies.refreshToken;
@@ -184,7 +219,34 @@ export class AuthHandler {
         } else if (logoutResult === undefined) {
             return res.sendStatus(HttpStatus.Unauthorized);
         }
-    }
+    };
+
+    public sendPasswordRecoveryInfo = async (
+        req: RequestWithBody<PasswordRecoveryInputModel>,
+        res: Response,
+    ) => {
+        const sentPasswordRecoveryResult: CustomResult =
+            await this.authCommandService.sendPasswordRecoveryInfo(
+                req.body,
+            );
+
+        if (sentPasswordRecoveryResult.statusCode !== HttpStatus.NoContent) {
+            console.error(
+                "Error description: ",
+                sentPasswordRecoveryResult?.statusDescription,
+                JSON.stringify(sentPasswordRecoveryResult.errorsMessages),
+            );
+
+            return res
+                .status(sentPasswordRecoveryResult.statusCode)
+                .send({
+                    errorsMessages: sentPasswordRecoveryResult.errorsMessages,
+                });
+        }
+
+        // даже в случае если такого адреса нет, чтобы не раскрывать информацию мы шлем 204
+        return res.sendStatus(HttpStatus.NoContent);
+    };
 }
 
 // export const attemptToLogin = async (

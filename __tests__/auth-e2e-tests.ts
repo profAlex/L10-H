@@ -13,7 +13,9 @@ import { UUIDgeneration } from "../src/adapters/randomUUIDgeneration/UUIDgenerat
 import { LoginInputModel } from "../src/routers/router-types/login-input-model";
 import jwt from "jsonwebtoken";
 import { envConfig } from "../src/config";
-import { UsersQueryRepository } from "../src/repository-layers/query-repository-layer/users-query-repository";
+import { UsersCommandRepository } from "../src/repository-layers/command-repository-layer/users-command-repository";
+import { BcryptService } from "../src/adapters/authentication/bcrypt-service";
+import { usersCommandRepository, usersQueryRepository } from "../src/composition-root/composition-root";
 
 describe("Test API for managing login, registration and registration-confirmation services", () => {
     const testApp = express();
@@ -43,13 +45,15 @@ describe("Test API for managing login, registration and registration-confirmatio
     // let loginCreds_2 = {};
 
     beforeEach(() => {
-
+        //const bcryptService = new BcryptService();
+        //const usersCommandRepository = new UsersCommandRepository(bcryptService);
+        
         // мокаем возвращаемое значение для некоторых тестируемых здесь функций, относящихся в первую очередь к работе с почтовым сервисом
         // это нужно делать в блоке beforeEach, иначе шпион будет накапливать статистику вызовов
         // глобально внутри всего describe, и это будет сбивать логику проверок
         jest.spyOn(
             mailerService,
-            "sendConfirmationRegisterEmail",
+            "sendEmailWithCode",
         ).mockResolvedValue(true);
 
         jest.spyOn(UUIDgeneration, "generateUUID").mockReturnValue(
@@ -70,14 +74,14 @@ describe("Test API for managing login, registration and registration-confirmatio
             password: "hello_world",
             email: "test_email@yandex.com",
         };
-        userId_1 = await dataCommandRepository.createNewUser(newUser_1);
+        userId_1 = await usersCommandRepository.createNewUser(newUser_1);
 
         const newUser_2: UserInputModel = {
             login: "hello_w2",
             password: "hello_world",
             email: "test_email_2@yandex.com",
         };
-        userId_2 = await dataCommandRepository.createNewUser(newUser_2);
+        userId_2 = await usersCommandRepository.createNewUser(newUser_2);
         //
         // const newUser_3: UserInputModel = {
         //     login: "hello_world_3",
@@ -105,7 +109,7 @@ describe("Test API for managing login, registration and registration-confirmatio
     });
 
     it("POST '/api/auth/login' - successful login attempt (response 200)", async () => {
-        expect(await UsersQueryRepository.returnUsersAmount()).toBe(2);
+        expect(await usersQueryRepository.returnUsersAmount()).toBe(2);
 
         const loginCreds_1 = {
             loginOrEmail: "hello_w2",
@@ -126,7 +130,7 @@ describe("Test API for managing login, registration and registration-confirmatio
     });
 
     it("POST '/api/auth/login' - unsuccessful login attempt (response 401)", async () => {
-        expect(await UsersQueryRepository.returnUsersAmount()).toBe(2);
+        expect(await usersQueryRepository.returnUsersAmount()).toBe(2);
 
         const loginCreds_2 = {
             loginOrEmail: "wrong_log",
@@ -143,7 +147,7 @@ describe("Test API for managing login, registration and registration-confirmatio
     });
 
     it("GET '/api/auth/me' - unsuccessful request (response 401) because of incorrect token sent", async () => {
-        expect(await UsersQueryRepository.returnUsersAmount()).toBe(2);
+        expect(await usersQueryRepository.returnUsersAmount()).toBe(2);
 
         const res = await request(testApp)
             .get(`${AUTH_PATH}/me`)
@@ -155,7 +159,7 @@ describe("Test API for managing login, registration and registration-confirmatio
     });
 
     it("POST '/api/auth/registration' - attempt to register via email (successful)", async () => {
-        expect(await UsersQueryRepository.returnUsersAmount()).toBe(2);
+        expect(await usersQueryRepository.returnUsersAmount()).toBe(2);
 
         const newUserToRegisterViaEmail: RegistrationUserInputModel = {
             login: "new_login",
@@ -168,9 +172,9 @@ describe("Test API for managing login, registration and registration-confirmatio
             .send(newUserToRegisterViaEmail);
 
         expect(res.status).toBe(HttpStatus.NoContent);
-        expect(mailerService.sendConfirmationRegisterEmail).toHaveBeenCalled();
+        expect(mailerService.sendEmailWithCode).toHaveBeenCalled();
         expect(
-            mailerService.sendConfirmationRegisterEmail,
+            mailerService.sendEmailWithCode,
         ).toHaveBeenCalledTimes(1);
     });
 
@@ -189,7 +193,7 @@ describe("Test API for managing login, registration and registration-confirmatio
     //         // // мокаем возвращаемое значение
     //         // jest.spyOn(
     //         //         mailerService,
-    //         //         "sendConfirmationRegisterEmail"
+    //         //         "sendEmailWithCode"
     //         //     )
     //         //     .mockResolvedValue(true);
     //
@@ -201,16 +205,16 @@ describe("Test API for managing login, registration and registration-confirmatio
     //
     //         expect(res.status)
     //             .toBe(HttpStatus.NoContent);
-    //         expect(mailerService.sendConfirmationRegisterEmail)
+    //         expect(mailerService.sendEmailWithCode)
     //             .toHaveBeenCalled();
-    //         expect(mailerService.sendConfirmationRegisterEmail)
+    //         expect(mailerService.sendEmailWithCode)
     //             .toHaveBeenCalledTimes(1);
     //
     //     }
     // );
 
     it("POST '/api/auth/registration' - attempt to register via email (not successful)", async () => {
-        expect(await UsersQueryRepository.returnUsersAmount()).toBe(3);
+        expect(await usersQueryRepository.returnUsersAmount()).toBe(3);
 
         const newUserToRegisterViaEmail: RegistrationUserInputModel = {
             login: "hello_wr",
@@ -238,15 +242,15 @@ describe("Test API for managing login, registration and registration-confirmatio
 
         expect(res.status).toBe(HttpStatus.BadRequest);
         expect(res1.status).toBe(HttpStatus.BadRequest);
-        // expect(mailerService.sendConfirmationRegisterEmail)
+        // expect(mailerService.sendEmailWithCode)
         // .toHaveBeenCalled();
         expect(
-            mailerService.sendConfirmationRegisterEmail,
+            mailerService.sendEmailWithCode,
         ).toHaveBeenCalledTimes(0);
     });
 
     it("POST '/api/auth/registration-confirmation' - attempt to confirm registration by sending and accepting registration code (successful)", async () => {
-        expect(await UsersQueryRepository.returnUsersAmount()).toBe(3);
+        expect(await usersQueryRepository.returnUsersAmount()).toBe(3);
 
         const resentEmail: ResentRegistrationConfirmationInput = {
             email: "geniusb198@yandex.ru",
@@ -258,14 +262,14 @@ describe("Test API for managing login, registration and registration-confirmatio
 
         expect(res.status).toBe(HttpStatus.NoContent);
 
-        expect(mailerService.sendConfirmationRegisterEmail).toHaveBeenCalled();
+        expect(mailerService.sendEmailWithCode).toHaveBeenCalled();
         expect(
-            mailerService.sendConfirmationRegisterEmail,
+            mailerService.sendEmailWithCode,
         ).toHaveBeenCalledTimes(1);
     });
 
     it("POST '/api/auth/registration-confirmation' - attempt to confirm registration by sending and accepting registration code (not successful, cuz incorrect email)", async () => {
-        expect(await UsersQueryRepository.returnUsersAmount()).toBe(3);
+        expect(await usersQueryRepository.returnUsersAmount()).toBe(3);
 
         const resentEmail: ResentRegistrationConfirmationInput = {
             email: "tesssst_email@yandex.com",
@@ -278,14 +282,14 @@ describe("Test API for managing login, registration and registration-confirmatio
         expect(res.status).toBe(HttpStatus.BadRequest);
 
         expect(
-            mailerService.sendConfirmationRegisterEmail,
+            mailerService.sendEmailWithCode,
         ).not.toHaveBeenCalled();
-        // expect(mailerService.sendConfirmationRegisterEmail)
+        // expect(mailerService.sendEmailWithCode)
         //     .toHaveBeenCalledTimes(1);
     });
 
     it("POST '/api/auth/registration-email-resending' - attempt to resend registration code (successful)", async () => {
-        expect(await UsersQueryRepository.returnUsersAmount()).toBe(3);
+        expect(await usersQueryRepository.returnUsersAmount()).toBe(3);
 
         const newUserToRegisterViaEmail: RegistrationUserInputModel = {
             login: "another",
@@ -300,9 +304,9 @@ describe("Test API for managing login, registration and registration-confirmatio
             .send(newUserToRegisterViaEmail);
 
         expect(registrationRes.status).toBe(HttpStatus.NoContent);
-        expect(mailerService.sendConfirmationRegisterEmail).toHaveBeenCalled();
+        expect(mailerService.sendEmailWithCode).toHaveBeenCalled();
         expect(
-            mailerService.sendConfirmationRegisterEmail,
+            mailerService.sendEmailWithCode,
         ).toHaveBeenCalledTimes(1);
 
         const confirmationRes = await request(testApp)
@@ -315,7 +319,7 @@ describe("Test API for managing login, registration and registration-confirmatio
     });
 
     it("POST '/api/auth/registration-email-resending' - attempt to resend registration code (not successful)", async () => {
-        expect(await UsersQueryRepository.returnUsersAmount()).toBe(4);
+        expect(await usersQueryRepository.returnUsersAmount()).toBe(4);
 
         const newUserToRegisterViaEmail: RegistrationUserInputModel = {
             login: "a1other",
@@ -331,9 +335,9 @@ describe("Test API for managing login, registration and registration-confirmatio
             .send(newUserToRegisterViaEmail);
 
         expect(registrationRes.status).toBe(HttpStatus.NoContent);
-        expect(mailerService.sendConfirmationRegisterEmail).toHaveBeenCalled();
+        expect(mailerService.sendEmailWithCode).toHaveBeenCalled();
         expect(
-            mailerService.sendConfirmationRegisterEmail,
+            mailerService.sendEmailWithCode,
         ).toHaveBeenCalledTimes(1);
 
         const confirmationRes = await request(testApp)
@@ -348,7 +352,7 @@ describe("Test API for managing login, registration and registration-confirmatio
     //********************************************************************************
 
     it("POST '/api/auth/refresh-token' - attempt to refresh token (successful)", async () => {
-        expect(await UsersQueryRepository.returnUsersAmount()).toBe(5);
+        expect(await usersQueryRepository.returnUsersAmount()).toBe(5);
 
         // это существующие креды, создавали в первом it
         const loginData: LoginInputModel = {
@@ -481,7 +485,7 @@ describe("Test API for managing login, registration and registration-confirmatio
     });
 
     it("POST '/api/auth/logout' - attempt to logout (successful)", async () => {
-        expect(await UsersQueryRepository.returnUsersAmount()).toBe(5);
+        expect(await usersQueryRepository.returnUsersAmount()).toBe(5);
 
         const loginData: LoginInputModel = {
             loginOrEmail: "hello_w2",

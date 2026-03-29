@@ -15,8 +15,9 @@ import {
 // } from "./router-handlers/auth-router-description";
 import { accessTokenGuard } from "./guard-middleware/access-token-guard";
 import {
+    recoveryCodeValidator,
     registrationConfirmationValidator,
-    registrationResentConfirmationValidator,
+    registrationResentConfirmationValidator
 } from "./validation-middleware/auth-router-general-middleware-validator";
 import {
     ipRequestRestrictionGuard,
@@ -74,3 +75,21 @@ authRouter.post("/refresh-token",
 
 // In cookie client must send correct refreshToken that will be revoked
 authRouter.post("/logout", refreshTokenGuardInstance.refreshTokenGuard, authHandler.logoutOnDemand);
+
+// Password recovery via Email confirmation. Email should be sent with RecoveryCode inside
+authRouter.post(
+    "/password-recovery",
+    ipRequestRestrictionGuardForResending,
+    registrationResentConfirmationValidator,
+    inputErrorManagementMiddleware,
+    authHandler.sendPasswordRecoveryInfo,
+);
+
+// Confirm Password recovery code and changing password
+authRouter.post(
+    "/new-password",
+    ipRequestRestrictionGuard,
+    recoveryCodeValidator,
+    inputErrorManagementMiddleware,
+    authHandler.newPasswordRecoveryConfirmation,
+);

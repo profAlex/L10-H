@@ -22,18 +22,21 @@ import { UserSession } from "../common/classes/session-class";
 import { envConfig } from "../config";
 import { UsersQueryRepository } from "../repository-layers/query-repository-layer/users-query-repository";
 import { SessionsCommandRepository } from "../repository-layers/command-repository-layer/sessions-command-repository";
+import { PasswordRecoveryInputModel } from "../routers/router-types/auth-password-recovery-input-model";
+import { NewPasswordRecoveryInputModel } from "../routers/router-types/auth-new-password-recovery-input-model";
 
 
 export class AuthCommandService {
     constructor(
         protected usersQueryRepository: UsersQueryRepository,
         protected sessionsCommandRepository: SessionsCommandRepository,
-        protected bcryptService: BcryptService,
-    ) {}
+        protected bcryptService: BcryptService
+    ) {
+    }
 
     async loginUser(
         req: RequestWithBody<AuthLoginInputModel>,
-        res: Response,
+        res: Response
     ): Promise<CustomResult<RotationPairToken>> {
         const { loginOrEmail, password } = req.body;
 
@@ -49,16 +52,16 @@ export class AuthCommandService {
                 errorsMessages: [
                     {
                         field: "dataQueryRepository.findByLoginOrEmail", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
-                        message: "Wrong login or password",
-                    },
-                ],
+                        message: "Wrong login or password"
+                    }
+                ]
             };
         }
 
         // если существует - проверяем что пароль верен
         const isCorrectCredentials = await this.checkUserCredentials(
             password,
-            user.passwordHash,
+            user.passwordHash
         );
 
         if (isCorrectCredentials === false) {
@@ -69,9 +72,9 @@ export class AuthCommandService {
                 errorsMessages: [
                     {
                         field: "loginUser -> checkUserCredentials",
-                        message: "Wrong login or password",
-                    },
-                ],
+                        message: "Wrong login or password"
+                    }
+                ]
             };
         } else if (isCorrectCredentials === null) {
             return {
@@ -83,9 +86,9 @@ export class AuthCommandService {
                     {
                         field: "loginUser -> checkUserCredentials",
                         message:
-                            "Failed attempt to check credentials login or password",
-                    },
-                ],
+                            "Failed attempt to check credentials login or password"
+                    }
+                ]
             };
         }
 
@@ -99,7 +102,7 @@ export class AuthCommandService {
             sessionObjectId,
             user.id,
             deviceName,
-            deviceIp,
+            deviceIp
         );
         const sessionIat = tempSession.issuedAt;
         const sessionExp = tempSession.expiresAt;
@@ -114,7 +117,7 @@ export class AuthCommandService {
 
         if (!isSuccessfulSessionCreated) {
             console.error(
-                "Error inside loginUser -> dataCommandRepository.createSession(tempSession)",
+                "Error inside loginUser -> dataCommandRepository.createSession(tempSession)"
             );
             return {
                 data: null,
@@ -124,9 +127,9 @@ export class AuthCommandService {
                 errorsMessages: [
                     {
                         field: "dataCommandRepository.createSession(tempSession)",
-                        message: "Error while creating session",
-                    },
-                ],
+                        message: "Error while creating session"
+                    }
+                ]
             };
         }
 
@@ -135,7 +138,7 @@ export class AuthCommandService {
             user.id,
             sessionIat,
             sessionExp,
-            sessionDeviceId,
+            sessionDeviceId
         );
         if (!pairOfToken.data) {
             console.error(pairOfToken.statusDescription);
@@ -143,7 +146,7 @@ export class AuthCommandService {
                 data: null,
                 statusCode: pairOfToken.statusCode,
                 statusDescription: pairOfToken.statusDescription,
-                errorsMessages: pairOfToken.errorsMessages,
+                errorsMessages: pairOfToken.errorsMessages
             };
         }
 
@@ -152,11 +155,11 @@ export class AuthCommandService {
 
     // пробуем зарегистрировать возвращенный от юзера код подтверждения
     async confirmRegistrationCode(
-        sentData: RegistrationConfirmationInput,
+        sentData: RegistrationConfirmationInput
     ): Promise<CustomResult> {
         try {
             return await dataCommandRepository.confirmRegistrationCode(
-                sentData,
+                sentData
             );
         } catch (error) {
             return {
@@ -167,16 +170,40 @@ export class AuthCommandService {
                 errorsMessages: [
                     {
                         field: "",
-                        message: "Unknown error",
-                    },
-                ],
+                        message: "Unknown error"
+                    }
+                ]
+            };
+        }
+    }
+
+    // пробуем сравнить присланный код-восстановления с имеющимся в базе и обновить хэш пароля
+    async newPasswordRecoveryConfirmation(
+        sentData: NewPasswordRecoveryInputModel
+    ): Promise<CustomResult> {
+        try {
+            return await dataCommandRepository.confirmPasswordRecoveryCode(
+                sentData
+            );
+        } catch (error) {
+            return {
+                data: null,
+                statusCode: HttpStatus.InternalServerError,
+                statusDescription:
+                    "Unknown error in AuthCommandService -> newPasswordRecoveryConfirmation",
+                errorsMessages: [
+                    {
+                        field: "",
+                        message: "Unknown error"
+                    }
+                ]
             };
         }
     }
 
     // пробуем зарегистрировать пользователя по его запросу (т.е. по запросу фронта)
     async registerNewUser(
-        sentData: RegistrationUserInputModel,
+        sentData: RegistrationUserInputModel
     ): Promise<CustomResult> {
         try {
             const ifUserLoginExists =
@@ -193,9 +220,9 @@ export class AuthCommandService {
                     errorsMessages: [
                         {
                             field: "AuthCommandService -> registerNewUser -> if(ifUserLoginExists)",
-                            message: "Email or Login already exists!!!",
-                        },
-                    ],
+                            message: "Email or Login already exists!!!"
+                        }
+                    ]
                 };
             }
             if (ifUserEmailExists) {
@@ -207,14 +234,14 @@ export class AuthCommandService {
                     errorsMessages: [
                         {
                             field: "email",
-                            message: "Email or Login already exists!!!",
-                        },
-                    ],
+                            message: "Email or Login already exists!!!"
+                        }
+                    ]
                 };
             }
 
             const passwordHash = await this.bcryptService.generateHash(
-                sentData.password,
+                sentData.password
             );
 
             if (!passwordHash) {
@@ -225,9 +252,9 @@ export class AuthCommandService {
                     errorsMessages: [
                         {
                             field: "bcryptService.generateHash",
-                            message: "Generating hash error",
-                        },
-                    ],
+                            message: "Generating hash error"
+                        }
+                    ]
                 };
             }
 
@@ -251,7 +278,7 @@ export class AuthCommandService {
                 sentData.login,
                 sentData.email,
                 passwordHash,
-                tempId,
+                tempId
             );
 
             const newUserInsertionResult =
@@ -262,7 +289,7 @@ export class AuthCommandService {
                     data: newUserInsertionResult.data,
                     statusCode: newUserInsertionResult.statusCode,
                     statusDescription: newUserInsertionResult.statusDescription,
-                    errorsMessages: newUserInsertionResult.errorsMessages,
+                    errorsMessages: newUserInsertionResult.errorsMessages
                 };
             }
 
@@ -275,18 +302,18 @@ export class AuthCommandService {
             // так что во втором случае пусть юзер сам лучше на себя возьмет это работу - просто повторно отправит если что запррос, нам главно оптимально подобрать период удалления неподтвержденных данных (минут 15-30)
 
             const sendingResult =
-                await mailerService.sendConfirmationRegisterEmail(
-                    '"Alex St" <geniusb198@yandex.ru>',
+                await mailerService.sendEmailWithCode(
+                    "\"Alex St\" <geniusb198@yandex.ru>",
                     newUserEntry.email,
                     newUserEntry.emailConfirmation.confirmationCode,
-                    emailExamples.registrationEmail,
+                    emailExamples.registrationEmail
                 );
 
             let status =
                 "Sending went without problems, awaiting confirmation form user";
             if (!sendingResult) {
                 console.error(
-                    "Something went wrong while sending the registration email",
+                    "Something went wrong while sending the registration email"
                 );
                 status =
                     "Something went wrong while sending the registration email";
@@ -300,9 +327,9 @@ export class AuthCommandService {
                 errorsMessages: [
                     {
                         field: "",
-                        message: "",
-                    },
-                ],
+                        message: ""
+                    }
+                ]
             };
         } catch (error) {
             return {
@@ -313,16 +340,16 @@ export class AuthCommandService {
                 errorsMessages: [
                     {
                         field: "",
-                        message: "Unknown error",
-                    },
-                ],
+                        message: "Unknown error"
+                    }
+                ]
             };
         }
     }
 
     // запрос на повторную отправку email с подтверждением регистрационного кода
     async resendConfirmRegistrationCode(
-        sentData: ResentRegistrationConfirmationInput,
+        sentData: ResentRegistrationConfirmationInput
     ): Promise<CustomResult> {
         try {
             // const allUsersList = await dataCommandRepository.findAllUsers();
@@ -330,7 +357,7 @@ export class AuthCommandService {
 
             const isUserInDatabase =
                 await dataCommandRepository.findNotConfirmedByEmail(
-                    sentData.email,
+                    sentData.email
                 );
 
             if (!isUserInDatabase) {
@@ -338,19 +365,19 @@ export class AuthCommandService {
                     data: null,
                     statusCode: HttpStatus.BadRequest,
                     statusDescription:
-                        "AuthCommandService -> resendConfirmRegistrationCode -> if (isUserInDatabase)",
+                        "AuthCommandService -> resendConfirmRegistrationCode -> if (!isUserInDatabase)",
                     errorsMessages: [
                         {
                             field: "email",
-                            message: "Email doesn't exist or already confirmed",
-                        },
-                    ],
+                            message: "Email doesn't exist or already confirmed"
+                        }
+                    ]
                 };
             }
 
             return await dataCommandRepository.resendConfirmRegistrationCode(
                 sentData,
-                isUserInDatabase,
+                isUserInDatabase
             );
         } catch (error) {
             return {
@@ -361,9 +388,9 @@ export class AuthCommandService {
                 errorsMessages: [
                     {
                         field: "",
-                        message: "Unknown error",
-                    },
-                ],
+                        message: "Unknown error"
+                    }
+                ]
             };
         }
     }
@@ -372,7 +399,7 @@ export class AuthCommandService {
     async refreshTokenOnDemand(
         deviceId: string,
         userId: string,
-        sessionId: ObjectId,
+        sessionId: ObjectId
     ): Promise<CustomResult<RotationPairToken>> {
         // const sessionData = await findSessionByPrimaryKey(sessionId);
         // формируем новые даты exp и iat
@@ -384,7 +411,7 @@ export class AuthCommandService {
 
         // Устанавливаем expiresAt на основе той же базовой временной метки
         const expiresAt = new Date(
-            issuedAt.getTime() + envConfig.refreshTokenLifetime * 1000,
+            issuedAt.getTime() + envConfig.refreshTokenLifetime * 1000
         );
 
         // обновляем данные в базе сессий
@@ -392,7 +419,7 @@ export class AuthCommandService {
             await this.sessionsCommandRepository.updateSession(
                 expiresAt,
                 issuedAt,
-                sessionId,
+                sessionId
             );
         if (!isSessionUpdated) {
             console.error("Couldn't update session data");
@@ -403,9 +430,9 @@ export class AuthCommandService {
                 errorsMessages: [
                     {
                         field: "AuthCommandService -> refreshTokenOnDemand -> dataCommandRepository.updateSession(expiresAt, issuedAt, sessionId)",
-                        message: "Couldn't update session data",
-                    },
-                ],
+                        message: "Couldn't update session data"
+                    }
+                ]
             };
         }
 
@@ -414,7 +441,7 @@ export class AuthCommandService {
             userId, // тоже что и sessionData!.userId,
             issuedAt,
             expiresAt,
-            deviceId,
+            deviceId
         );
         if (!pairOfToken.data) {
             console.error(pairOfToken.statusDescription);
@@ -422,7 +449,7 @@ export class AuthCommandService {
                 data: null,
                 statusCode: pairOfToken.statusCode,
                 statusDescription: pairOfToken.statusDescription,
-                errorsMessages: pairOfToken.errorsMessages,
+                errorsMessages: pairOfToken.errorsMessages
             };
         }
 
@@ -461,7 +488,7 @@ export class AuthCommandService {
     async logoutOnDemand(
         // oldRefreshToken: string,
         relatedUserId: string,
-        sessionId: ObjectId,
+        sessionId: ObjectId
     ): Promise<undefined | null> {
         // const ifSucessfullyAddedToBlackList =
         //     await dataCommandRepository.addRefreshTokenInfoToBlackList({
@@ -470,16 +497,64 @@ export class AuthCommandService {
         //     });
         const ifLoggedOutSuccessfully =
             await this.sessionsCommandRepository.removeSessionBySessionId(
-                sessionId,
+                sessionId
             );
 
         return ifLoggedOutSuccessfully;
     }
 
+    async sendPasswordRecoveryInfo(
+        sentData: PasswordRecoveryInputModel
+    ): Promise<CustomResult> {
+        try {
+            // const allUsersList = await dataCommandRepository.findAllUsers();
+            // console.log("DEBUG: ", allUsersList);
+
+            const isUserInDatabase =
+                await dataCommandRepository.findNotConfirmedByEmail(
+                    sentData.email
+                );
+
+            if (!isUserInDatabase) {
+                return {
+                    data: null,
+                    statusCode: HttpStatus.NoContent,
+                    statusDescription:
+                        "AuthCommandService -> sendPasswordRecoveryInfo -> if (!isUserInDatabase) ",
+                    errorsMessages: [
+                        {
+                            field: "email",
+                            message: "Email doesn't exist or already confirmed"
+                        }
+                    ]
+                };
+            }
+
+            return await dataCommandRepository.sendPasswordRecoveryInfo(
+                sentData,
+                isUserInDatabase
+            );
+        } catch (error) {
+            return {
+                data: null,
+                statusCode: HttpStatus.InternalServerError,
+                statusDescription:
+                    "Unknown error in AuthCommandService -> sendPasswordRecoveryInfo",
+                errorsMessages: [
+                    {
+                        field: "",
+                        message: "Unknown error"
+                    }
+                ]
+            };
+        }
+
+    }
+
     // вспомогательная функция
     async checkUserCredentials(
         password: string,
-        passwordHash: string,
+        passwordHash: string
     ): Promise<boolean | null> {
         return this.bcryptService.checkPassword(password, passwordHash);
     }
@@ -730,7 +805,7 @@ export class AuthCommandService {
 //             // так что во втором случае пусть юзер сам лучше на себя возьмет это работу - просто повторно отправит если что запррос, нам главно оптимально подобрать период удалления неподтвержденных данных (минут 15-30)
 //
 //             const sendingResult =
-//                 await mailerService.sendConfirmationRegisterEmail(
+//                 await mailerService.sendEmailWithCode(
 //                     '"Alex St" <geniusb198@yandex.ru>',
 //                     newUserEntry.email,
 //                     newUserEntry.emailConfirmation.confirmationCode,

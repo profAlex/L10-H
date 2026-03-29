@@ -18,7 +18,7 @@ export const emailExamples = {
 };
 
 export const mailerService = {
-    async sendConfirmationRegisterEmail(
+    async sendEmailWithCode(
         from: string,
         to: string,
         registrationCode: string,
@@ -38,7 +38,7 @@ export const mailerService = {
         const mailOptions = {
             from: from || "\"Alex St\" <geniusb198@yandex.ru>",
             to: to,
-            subject: "Registration confirmation",
+            subject: "Please, follow the provided link",
             text: "Please, follow the provided link to finish Your registration.",
             html: template(registrationCode)
         };

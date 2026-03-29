@@ -8,13 +8,11 @@ import {
 import { setupApp } from "../src/setup-app";
 import { closeDB, runDB } from "../src/db/mongo.db";
 import { UserInputModel } from "../src/routers/router-types/user-input-model";
-import { dataCommandRepository } from "../src/repository-layers/command-repository-layer/command-repository";
 import { dataQueryRepository } from "../src/repository-layers/query-repository-layer/query-repository";
 import { HttpStatus } from "../src/common/http-statuses/http-statuses";
 import { jwtService } from "../src/adapters/verification/jwt-service";
 import { JwtRefreshPayloadType } from "../src/adapters/verification/payload-type";
-import { RegistrationUserInputModel } from "../src/routers/router-types/auth-registration-input-model";
-import { UsersQueryRepository } from "../src/repository-layers/query-repository-layer/users-query-repository";
+import { usersCommandRepository, usersQueryRepository } from "../src/composition-root/composition-root";
 
 describe("Test API for managing session life-time and updated refresh-token renewal system", () => {
     const testApp = express();
@@ -56,7 +54,7 @@ describe("Test API for managing session life-time and updated refresh-token rene
     //     // глобально внутри всего describe, и это будет сбивать логику проверок
     //     jest.spyOn(
     //         mailerService,
-    //         "sendConfirmationRegisterEmail",
+    //         "sendEmailWithCode",
     //     ).mockResolvedValue(true);
     //
     //     jest.spyOn(UUIDgeneration, "generateUUID").mockReturnValue(
@@ -75,28 +73,28 @@ describe("Test API for managing session life-time and updated refresh-token rene
             password: "hello_world",
             email: "test_email@yandex.com",
         };
-        userId_1 = await dataCommandRepository.createNewUser(newUser_1);
+        userId_1 = await usersCommandRepository.createNewUser(newUser_1);
 
         const newUser_2: UserInputModel = {
             login: "hello_w2",
             password: "hello_world",
             email: "test_email_2@yandex.com",
         };
-        userId_2 = await dataCommandRepository.createNewUser(newUser_2);
+        userId_2 = await usersCommandRepository.createNewUser(newUser_2);
 
         const newUser_3: UserInputModel = {
             login: "hello_world_3",
             password: "hello_world",
             email: "test_email_3@yandex.com",
         };
-        userId_3 = await dataCommandRepository.createNewUser(newUser_3);
+        userId_3 = await usersCommandRepository.createNewUser(newUser_3);
 
         const newUser_4: UserInputModel = {
             login: "hello_world_4",
             password: "hello_world",
             email: "test_email_4@yandex.com",
         };
-        userId_4 = await dataCommandRepository.createNewUser(newUser_4);
+        userId_4 = await usersCommandRepository.createNewUser(newUser_4);
 
         // loginCreds_1 = {
         //     loginOrEmail: "hello_wrld1",
@@ -110,7 +108,7 @@ describe("Test API for managing session life-time and updated refresh-token rene
     });
 
     it("GET '/api/security/devices' - should return proper amount of active sessions(devices) equal tp 4", async () => {
-        expect(await UsersQueryRepository.returnUsersAmount()).toBe(4);
+        expect(await usersQueryRepository.returnUsersAmount()).toBe(4);
 
         const loginCreds_1 = {
             loginOrEmail: "hello_wr",
@@ -272,7 +270,7 @@ describe("Test API for managing session life-time and updated refresh-token rene
     }, 15000);
 
     it("DELETE '/api/security/devices/:deviceId' - should return error because deviceId inside uri is not viable (not successful)", async () => {
-        expect(await UsersQueryRepository.returnUsersAmount()).toBe(4);
+        expect(await usersQueryRepository.returnUsersAmount()).toBe(4);
 
         const notViableDeviceId = "1111111111111111111111";
         const res1 = await request(testApp).delete(
@@ -307,7 +305,7 @@ describe("Test API for managing session life-time and updated refresh-token rene
     });
 
     it("POST '/api/auth/refresh-token' - attempt to refresh token (successful)", async () => {
-        expect(await UsersQueryRepository.returnUsersAmount()).toBe(4);
+        expect(await usersQueryRepository.returnUsersAmount()).toBe(4);
 
         // извлекаем данные из актуального рефреш-токена
         if (!refreshTokenValue1) {

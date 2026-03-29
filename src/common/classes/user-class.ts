@@ -13,6 +13,11 @@ export class User {
         expirationDate: Date;
         isConfirmed: boolean;
     };
+    passwordRecoveryInformation:{
+        passwordRecoveryCode: string | null;
+        expirationDate: Date | null;
+        isRecoveryInAction: boolean;
+    }
 
     constructor(login: string, email: string, hash: string, _id: ObjectId) {
         this._id = _id;
@@ -28,5 +33,10 @@ export class User {
             ),
             isConfirmed: false,
         };
+        this.passwordRecoveryInformation = {
+            passwordRecoveryCode: null,
+            expirationDate: null,
+            isRecoveryInAction: false,
+        }
     }
 }

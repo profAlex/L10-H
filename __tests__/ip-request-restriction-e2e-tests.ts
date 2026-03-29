@@ -49,7 +49,7 @@ describe("Test IP request restriction system", () => {
         // глобально внутри всего describe, и это будет сбивать логику проверок
         jest.spyOn(
             mailerService,
-            "sendConfirmationRegisterEmail",
+            "sendEmailWithCode",
         ).mockResolvedValue(true);
 
         jest.spyOn(UUIDgeneration, "generateUUID").mockReturnValue(
@@ -201,7 +201,7 @@ describe("Test IP request restriction system", () => {
 
             expect(res.status).toBe(HttpStatus.NoContent);
             expect(
-                mailerService.sendConfirmationRegisterEmail,
+                mailerService.sendEmailWithCode,
             ).toHaveBeenCalled();
 
             await delay(1000); // задержка 1 секунда
@@ -209,7 +209,7 @@ describe("Test IP request restriction system", () => {
         }
 
         expect(
-            mailerService.sendConfirmationRegisterEmail,
+            mailerService.sendEmailWithCode,
         ).toHaveBeenCalledTimes(5);
 
         const restrictedSessionsList =
@@ -222,7 +222,7 @@ describe("Test IP request restriction system", () => {
             .send(arrayOfUserRegistrationData[5]);
 
         expect(res.status).toBe(HttpStatus.TooManyRequests);
-        expect(mailerService.sendConfirmationRegisterEmail).toHaveBeenCalled();
+        expect(mailerService.sendEmailWithCode).toHaveBeenCalled();
 
         const res1 = await request(testApp)
             .post(`${AUTH_PATH}/registration`)
@@ -230,7 +230,7 @@ describe("Test IP request restriction system", () => {
             .send(arrayOfUserRegistrationData[5]);
 
         expect(res1.status).toBe(HttpStatus.TooManyRequests);
-        expect(mailerService.sendConfirmationRegisterEmail).toHaveBeenCalled();
+        expect(mailerService.sendEmailWithCode).toHaveBeenCalled();
 
         await delay(5000); // задержка 5 секунд
 
@@ -240,7 +240,7 @@ describe("Test IP request restriction system", () => {
             .send(arrayOfUserRegistrationData[5]);
 
         expect(res2.status).toBe(HttpStatus.NoContent);
-        expect(mailerService.sendConfirmationRegisterEmail).toHaveBeenCalled();
+        expect(mailerService.sendEmailWithCode).toHaveBeenCalled();
 
         const restrictedSessionsList1 =
             await dataQueryRepository.utilGetAllRestrictedSessionRecords();
@@ -300,7 +300,7 @@ describe("Test IP request restriction system", () => {
             .send(newUserRegistrationData);
 
         expect(resAdditinalLogin.status).toBe(HttpStatus.NoContent);
-        expect(mailerService.sendConfirmationRegisterEmail).toHaveBeenCalled();
+        expect(mailerService.sendEmailWithCode).toHaveBeenCalled();
 
         const emailToResendRegistration: ResentRegistrationConfirmationInput = {
             email: "geniusb8@yandex.ru",
@@ -318,7 +318,7 @@ describe("Test IP request restriction system", () => {
 
             expect(res.status).toBe(HttpStatus.NoContent);
             expect(
-                mailerService.sendConfirmationRegisterEmail,
+                mailerService.sendEmailWithCode,
             ).toHaveBeenCalled();
 
             await delay(1000); // задержка 1 секунда
@@ -326,7 +326,7 @@ describe("Test IP request restriction system", () => {
         }
 
         expect(
-            mailerService.sendConfirmationRegisterEmail,
+            mailerService.sendEmailWithCode,
         ).toHaveBeenCalledTimes(6);
 
         // шестой вызов внутри 10-ти секундного интервала, должен будет вернуть ошибку
@@ -335,7 +335,7 @@ describe("Test IP request restriction system", () => {
             .send(emailToResendRegistration);
 
         expect(res1.status).toBe(HttpStatus.TooManyRequests);
-        expect(mailerService.sendConfirmationRegisterEmail).toHaveBeenCalled();
+        expect(mailerService.sendEmailWithCode).toHaveBeenCalled();
 
         await delay(5000); // задержка 5 секунд, чтобы перешагнуть 10-ти секундный барьер, после которого можно снова пробовать отсылать
 
@@ -345,7 +345,7 @@ describe("Test IP request restriction system", () => {
             .send(emailToResendRegistration);
 
         expect(res2.status).toBe(HttpStatus.NoContent);
-        expect(mailerService.sendConfirmationRegisterEmail).toHaveBeenCalled();
+        expect(mailerService.sendEmailWithCode).toHaveBeenCalled();
 
     }, 25000);
 });
