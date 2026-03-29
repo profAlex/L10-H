@@ -8,7 +8,8 @@ import { UserViewModel } from "../../routers/router-types/user-view-model";
 import { mapSingleUserCollectionToViewModel } from "../mappers/map-to-UserViewModel";
 
 export class UsersQueryRepository {
-    static async getSeveralUsers(
+
+    async getSeveralUsers(
         sentInputGetUsersQuery: InputGetUsersQuery,
     ): Promise<PaginatedUserViewModel> {
         const {
@@ -105,7 +106,7 @@ export class UsersQueryRepository {
         });
     }
 
-    static async findSingleUser(userId: string): Promise<UserViewModel | undefined> {
+    async findSingleUser(userId: string): Promise<UserViewModel | undefined> {
         if (ObjectId.isValid(userId)) {
             const user = await findUserByPrimaryKey(new ObjectId(userId));
 
@@ -117,7 +118,7 @@ export class UsersQueryRepository {
         return undefined;
     }
 
-    static async findByLoginOrEmail(
+    async findByLoginOrEmail(
         loginOrEmail: string,
     ): Promise<WithId<UserCollectionStorageModel> | null> {
         try {

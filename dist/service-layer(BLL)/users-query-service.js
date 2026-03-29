@@ -9,28 +9,21 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SecurityDevicesService = void 0;
-const query_repository_1 = require("../repository-layers/query-repository-layer/query-repository");
-class SecurityDevicesService {
-    constructor(sessionsCommandRepository) {
-        this.sessionsCommandRepository = sessionsCommandRepository;
+exports.UsersQueryService = void 0;
+class UsersQueryService {
+    constructor(usersQueryRepository) {
+        this.usersQueryRepository = usersQueryRepository;
     }
     ;
-    removeSessionById(deviceId) {
+    getSeveralUsers(sentInputGetUsersQuery) {
         return __awaiter(this, void 0, void 0, function* () {
-            return yield this.sessionsCommandRepository.removeSessionByDeviceId(deviceId);
+            return yield this.usersQueryRepository.getSeveralUsers(sentInputGetUsersQuery);
         });
     }
-    removeAllButOneSession(sessionId, userId) {
+    findSingleUser(userId) {
         return __awaiter(this, void 0, void 0, function* () {
-            return yield this.sessionsCommandRepository.removeAllButOneSession(sessionId, userId);
-        });
-    }
-    getActiveDevicesList(userId) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return yield query_repository_1.dataQueryRepository.getActiveDevicesList(userId);
+            return yield this.usersQueryRepository.findSingleUser(userId);
         });
     }
 }
-exports.SecurityDevicesService = SecurityDevicesService;
-;
+exports.UsersQueryService = UsersQueryService;

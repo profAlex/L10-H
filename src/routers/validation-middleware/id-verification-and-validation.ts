@@ -18,7 +18,8 @@ export function createIdValidator(
         res: Response,
         next: NextFunction,
     ) => {
-        const sentId = req.params[paramKey]; // динамический доступ
+        // const sentId = req.params[paramKey]; // динамический доступ
+        const sentId: string = typeof req.params[paramKey] === 'string' ? req.params[paramKey] : req.params[paramKey][0];
 
         if (await validateId(sentId, collectionName, res)) {
             next();

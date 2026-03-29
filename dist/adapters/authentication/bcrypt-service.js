@@ -12,9 +12,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.bcryptService = void 0;
+exports.BcryptService = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
-exports.bcryptService = {
+class BcryptService {
     generateHash(password) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
@@ -27,7 +27,7 @@ exports.bcryptService = {
                 return null;
             }
         });
-    },
+    }
     checkPassword(password, hash) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
@@ -39,5 +39,7 @@ exports.bcryptService = {
                 return null;
             }
         });
-    },
-};
+    }
+}
+exports.BcryptService = BcryptService;
+;

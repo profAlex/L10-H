@@ -15,9 +15,7 @@ exports.findSessionByPrimaryKey = findSessionByPrimaryKey;
 const mongo_db_1 = require("../../db/mongo.db");
 const mongodb_1 = require("mongodb");
 const custom_error_class_1 = require("../utility/custom-error-class");
-const bcrypt_service_1 = require("../../adapters/authentication/bcrypt-service");
 const http_statuses_1 = require("../../common/http-statuses/http-statuses");
-const user_class_1 = require("../../common/classes/user-class");
 const mailer_service_1 = require("../../adapters/email-sender/mailer-service");
 const node_crypto_1 = require("node:crypto");
 function findBlogByPrimaryKey(id) {
@@ -390,99 +388,117 @@ exports.dataCommandRepository = {
     // *****************************
     // методы для управления юзерами
     // *****************************
-    createNewUser(sentNewUser) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const passwordHash = yield bcrypt_service_1.bcryptService.generateHash(sentNewUser.password);
-                if (!passwordHash) {
-                    throw new custom_error_class_1.CustomError({
-                        errorMessage: {
-                            field: "bcryptService.generateHash",
-                            message: "Generating hash error",
-                        },
-                    });
-                }
-                const tempId = new mongodb_1.ObjectId();
-                // нижеследующее заменили на инициализацию через клас User через extend interface UserCollectionStorageModel
-                // const newUserEntry = {
-                //     _id: tempId,
-                //     id: tempId.toString(),
-                //     login: sentNewUser.login,
-                //     email: sentNewUser.email,
-                //     passwordHash: passwordHash,
-                //     createdAt: new Date(),
-                // } as UserCollectionStorageModel;
-                const newUserEntry = new user_class_1.User(sentNewUser.login, sentNewUser.email, passwordHash, tempId);
-                newUserEntry.emailConfirmation.isConfirmed = true; // для созданных админом пользователей подтверждения не нужно
-                const result = yield mongo_db_1.usersCollection.insertOne(newUserEntry);
-                if (!result.acknowledged) {
-                    throw new custom_error_class_1.CustomError({
-                        errorMessage: {
-                            field: "usersCollection.insertOne(newUserEntry)",
-                            message: "attempt to insert new user entry failed",
-                        },
-                    });
-                }
-                return result.insertedId.toString();
-            }
-            catch (error) {
-                if (error instanceof custom_error_class_1.CustomError) {
-                    if (error.metaData) {
-                        const errorData = error.metaData.errorMessage;
-                        console.error(`In field: ${errorData.field} - ${errorData.message}`);
-                    }
-                    else {
-                        console.error(`Unknown error: ${JSON.stringify(error)}`);
-                    }
-                    return undefined;
-                }
-                else {
-                    console.error(`Unknown error: ${JSON.stringify(error)}`);
-                    throw new Error("Placeholder for an error to be rethrown and dealt with in the future in createNewUser method of dataCommandRepository");
-                }
-            }
-        });
-    },
-    deleteUser(userId) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                if (mongodb_1.ObjectId.isValid(userId)) {
-                    const idToCheck = new mongodb_1.ObjectId(userId);
-                    const res = yield mongo_db_1.usersCollection.deleteOne({ _id: idToCheck });
-                    if (!res.acknowledged) {
-                        throw new custom_error_class_1.CustomError({
-                            errorMessage: {
-                                field: "usersCollection.deleteOne",
-                                message: "attempt to delete user entry failed",
-                            },
-                        });
-                    }
-                    if (res.deletedCount === 1) {
-                        return null;
-                    }
-                }
-                else {
-                    return undefined;
-                }
-            }
-            catch (error) {
-                if (error instanceof custom_error_class_1.CustomError) {
-                    if (error.metaData) {
-                        const errorData = error.metaData.errorMessage;
-                        console.error(`In field: ${errorData.field} - ${errorData.message}`);
-                    }
-                    else {
-                        console.error(`Unknown error: ${JSON.stringify(error)}`);
-                    }
-                    return undefined;
-                }
-                else {
-                    console.error(`Unknown error inside dataCommandRepository.deleteUser: ${JSON.stringify(error)}`);
-                    throw new Error("Placeholder for an error to be rethrown and dealt with in the future in deleteUser method of dataCommandRepository");
-                }
-            }
-        });
-    },
+    // async createNewUser(
+    //     sentNewUser: UserInputModel,
+    // ): Promise<string | undefined> {
+    //     try {
+    //         const passwordHash = await BcryptService.generateHash(
+    //             sentNewUser.password,
+    //         );
+    //         if (!passwordHash) {
+    //             throw new CustomError({
+    //                 errorMessage: {
+    //                     field: "bcryptService.generateHash",
+    //                     message: "Generating hash error",
+    //                 },
+    //             });
+    //         }
+    //
+    //         const tempId = new ObjectId();
+    //
+    //         // нижеследующее заменили на инициализацию через клас User через extend interface UserCollectionStorageModel
+    //         // const newUserEntry = {
+    //         //     _id: tempId,
+    //         //     id: tempId.toString(),
+    //         //     login: sentNewUser.login,
+    //         //     email: sentNewUser.email,
+    //         //     passwordHash: passwordHash,
+    //         //     createdAt: new Date(),
+    //         // } as UserCollectionStorageModel;
+    //
+    //         const newUserEntry = new User(
+    //             sentNewUser.login,
+    //             sentNewUser.email,
+    //             passwordHash,
+    //             tempId,
+    //         );
+    //
+    //         newUserEntry.emailConfirmation.isConfirmed = true; // для созданных админом пользователей подтверждения не нужно
+    //
+    //         const result = await usersCollection.insertOne(newUserEntry);
+    //
+    //         if (!result.acknowledged) {
+    //             throw new CustomError({
+    //                 errorMessage: {
+    //                     field: "usersCollection.insertOne(newUserEntry)",
+    //                     message: "attempt to insert new user entry failed",
+    //                 },
+    //             });
+    //         }
+    //         return result.insertedId.toString();
+    //     } catch (error) {
+    //         if (error instanceof CustomError) {
+    //             if (error.metaData) {
+    //                 const errorData = error.metaData.errorMessage;
+    //                 console.error(
+    //                     `In field: ${errorData.field} - ${errorData.message}`,
+    //                 );
+    //             } else {
+    //                 console.error(`Unknown error: ${JSON.stringify(error)}`);
+    //             }
+    //
+    //             return undefined;
+    //         } else {
+    //             console.error(`Unknown error: ${JSON.stringify(error)}`);
+    //             throw new Error(
+    //                 "Placeholder for an error to be rethrown and dealt with in the future in createNewUser method of dataCommandRepository",
+    //             );
+    //         }
+    //     }
+    // },
+    // async deleteUser(userId: string): Promise<null | undefined> {
+    //     try {
+    //         if (ObjectId.isValid(userId)) {
+    //             const idToCheck = new ObjectId(userId);
+    //             const res = await usersCollection.deleteOne({ _id: idToCheck });
+    //
+    //             if (!res.acknowledged) {
+    //                 throw new CustomError({
+    //                     errorMessage: {
+    //                         field: "usersCollection.deleteOne",
+    //                         message: "attempt to delete user entry failed",
+    //                     },
+    //                 });
+    //             }
+    //
+    //             if (res.deletedCount === 1) {
+    //                 return null;
+    //             }
+    //         } else {
+    //             return undefined;
+    //         }
+    //     } catch (error) {
+    //         if (error instanceof CustomError) {
+    //             if (error.metaData) {
+    //                 const errorData = error.metaData.errorMessage;
+    //                 console.error(
+    //                     `In field: ${errorData.field} - ${errorData.message}`,
+    //                 );
+    //             } else {
+    //                 console.error(`Unknown error: ${JSON.stringify(error)}`);
+    //             }
+    //
+    //             return undefined;
+    //         } else {
+    //             console.error(
+    //                 `Unknown error inside dataCommandRepository.deleteUser: ${JSON.stringify(error)}`,
+    //             );
+    //             throw new Error(
+    //                 "Placeholder for an error to be rethrown and dealt with in the future in deleteUser method of dataCommandRepository",
+    //             );
+    //         }
+    //     }
+    // },
     // *****************************
     // методы для управления комментариями
     // *****************************
@@ -988,120 +1004,146 @@ exports.dataCommandRepository = {
     // *****************************
     // методы для управления сессиями, а также управления сущностью security devices
     // *****************************
-    // export type SessionStorageModel = {
-    //     userId: string;
-    //     deviceId: string;
-    //     issuedAt: Date;
-    //     deviceName: string;
-    //     deviceIp: string;
-    //     expiresAt: Date;
-    // }
-    // там где этот метод используется для гварда - айдишник сессии в базе передаем через req, чтобы впоследствии можно было быстро найти данную сессию
-    findSession(userId, deviceId, expiresAt, issuedAt) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const session = yield mongo_db_1.sessionsDataStorage.findOne({
-                    userId: userId,
-                    deviceId: deviceId,
-                    expiresAt: expiresAt,
-                    issuedAt: issuedAt,
-                }, { projection: { _id: 1 } });
-                return session ? session._id : null;
-            }
-            catch (error) {
-                console.error("Unknown error during findSession", error);
-                return null;
-            }
-        });
-    },
-    createSession(sessionDto) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const result = yield mongo_db_1.sessionsDataStorage.insertOne(sessionDto);
-                return !!result;
-            }
-            catch (error) {
-                console.error("Unknown error during createSession", error);
-                return false;
-            }
-        });
-    },
-    updateSession(expiresAt, issuedAt, sessionIndexId) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const result = yield mongo_db_1.sessionsDataStorage.updateOne({ _id: sessionIndexId }, {
-                    $set: {
-                        expiresAt: expiresAt,
-                        issuedAt: issuedAt,
-                    },
-                });
-                if (!result.acknowledged) {
-                    console.error("Couldn't update session inside updateSession");
-                    return null;
-                }
-                return !!result;
-            }
-            catch (error) {
-                console.error("Unknown error inside findSession", error);
-                return null;
-            }
-        });
-    },
-    removeSessionBySessionId(sessionId) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const result = yield mongo_db_1.sessionsDataStorage.deleteOne({
-                    _id: sessionId,
-                });
-                if (!result.acknowledged) {
-                    console.error("Couldn't remove session inside removeSessionBySessionId");
-                    return undefined;
-                }
-                return null;
-            }
-            catch (error) {
-                console.error("Unknown error inside removeSessionBySessionId", error);
-                return undefined;
-            }
-        });
-    },
-    removeSessionByDeviceId(deviceId) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const result = yield mongo_db_1.sessionsDataStorage.deleteOne({
-                    deviceId: deviceId,
-                });
-                if (!result.acknowledged) {
-                    console.error("Couldn't remove session inside removeSessionByDeviceId");
-                    return undefined;
-                }
-                return null;
-            }
-            catch (error) {
-                console.error("Unknown error inside removeSessionByDeviceId", error);
-                return undefined;
-            }
-        });
-    },
-    removeAllButOneSession(sessionId, userId) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const result = yield mongo_db_1.sessionsDataStorage.deleteMany({
-                    userId: userId,
-                    _id: { $ne: sessionId }
-                });
-                if (!result.acknowledged) {
-                    console.error("Couldn't remove sessions inside removeAllButOneSession");
-                    return undefined;
-                }
-                return null;
-            }
-            catch (error) {
-                console.error("Unknown error inside removeAllButOneSession", error);
-                return undefined;
-            }
-        });
-    },
+    // // export type SessionStorageModel = {
+    // //     userId: string;
+    // //     deviceId: string;
+    // //     issuedAt: Date;
+    // //     deviceName: string;
+    // //     deviceIp: string;
+    // //     expiresAt: Date;
+    // // }
+    //
+    // // там где этот метод используется для гварда - айдишник сессии в базе передаем через req, чтобы впоследствии можно было быстро найти данную сессию
+    // async findSession(
+    //     userId: string,
+    //     deviceId: string,
+    //     expiresAt: Date,
+    //     issuedAt: Date,
+    // ): Promise<ObjectId | null> {
+    //     try {
+    //         const session=
+    //             await sessionsDataStorage.findOne(
+    //                 {
+    //                     userId: userId,
+    //                     deviceId: deviceId,
+    //                     expiresAt: expiresAt,
+    //                     issuedAt: issuedAt,
+    //                 },
+    //                 { projection: { _id: 1 } },
+    //             );
+    //
+    //         return session ? session._id : null;
+    //     } catch (error) {
+    //         console.error("Unknown error during findSession", error);
+    //
+    //         return null;
+    //     }
+    // },
+    //
+    // async createSession(sessionDto: UserSession): Promise<boolean> {
+    //     try {
+    //         const result = await sessionsDataStorage.insertOne(sessionDto);
+    //
+    //         return !!result;
+    //     } catch (error) {
+    //         console.error("Unknown error during createSession", error);
+    //
+    //         return false;
+    //     }
+    // },
+    //
+    // async updateSession(
+    //     expiresAt: Date,
+    //     issuedAt: Date,
+    //     sessionIndexId: ObjectId,
+    // ): Promise<boolean | null> {
+    //     try {
+    //         const result = await sessionsDataStorage.updateOne(
+    //             { _id: sessionIndexId },
+    //             {
+    //                 $set: {
+    //                     expiresAt: expiresAt,
+    //                     issuedAt: issuedAt,
+    //                 },
+    //             },
+    //         );
+    //
+    //         if (!result.acknowledged) {
+    //             console.error("Couldn't update session inside updateSession");
+    //
+    //             return null;
+    //         }
+    //
+    //         return !!result;
+    //     } catch (error) {
+    //         console.error("Unknown error inside findSession", error);
+    //
+    //         return null;
+    //     }
+    // },
+    //
+    // async removeSessionBySessionId(sessionId: ObjectId): Promise<undefined | null> {
+    //     try {
+    //         const result = await sessionsDataStorage.deleteOne({
+    //             _id: sessionId,
+    //         });
+    //
+    //         if (!result.acknowledged) {
+    //             console.error("Couldn't remove session inside removeSessionBySessionId");
+    //
+    //             return undefined;
+    //         }
+    //
+    //         return null;
+    //     }catch(error) {
+    //         console.error("Unknown error inside removeSessionBySessionId", error);
+    //
+    //         return undefined;
+    //     }
+    // },
+    //
+    //
+    // async removeSessionByDeviceId(deviceId: string): Promise<undefined | null> {
+    //     try {
+    //         const result = await sessionsDataStorage.deleteOne({
+    //             deviceId: deviceId,
+    //         });
+    //
+    //         if (!result.acknowledged) {
+    //             console.error("Couldn't remove session inside removeSessionByDeviceId");
+    //
+    //             return undefined;
+    //         }
+    //
+    //         return null;
+    //     }catch(error) {
+    //         console.error("Unknown error inside removeSessionByDeviceId", error);
+    //
+    //         return undefined;
+    //     }
+    // },
+    //
+    //
+    // async removeAllButOneSession(sessionId: ObjectId, userId:string): Promise<undefined | null> {
+    //     try {
+    //         const result = await sessionsDataStorage.deleteMany({
+    //             userId: userId,
+    //             _id: { $ne: sessionId }
+    //         });
+    //
+    //         if (!result.acknowledged) {
+    //             console.error("Couldn't remove sessions inside removeAllButOneSession");
+    //
+    //             return undefined;
+    //         }
+    //
+    //         return null;
+    //     }catch(error) {
+    //         console.error("Unknown error inside removeAllButOneSession", error);
+    //
+    //         return undefined;
+    //     }
+    // },
     insertUrlCall(uslCall) {
         return __awaiter(this, void 0, void 0, function* () {
             try {

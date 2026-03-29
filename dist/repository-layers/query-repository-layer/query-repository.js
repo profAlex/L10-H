@@ -16,12 +16,11 @@ const map_to_BlogViewModel_1 = require("../mappers/map-to-BlogViewModel");
 const map_to_PostViewModel_1 = require("../mappers/map-to-PostViewModel");
 const map_paginated_blog_search_1 = require("../mappers/map-paginated-blog-search");
 const map_paginated_post_search_1 = require("../mappers/map-paginated-post-search");
-const map_paginated_user_search_1 = require("../mappers/map-paginated-user-search");
-const map_to_UserViewModel_1 = require("../mappers/map-to-UserViewModel");
 const map_to_UserMeViewModel_1 = require("../mappers/map-to-UserMeViewModel");
 const map_paginated_comment_search_1 = require("../mappers/map-paginated-comment-search");
 const map_to_CommentViewModel_1 = require("../mappers/map-to-CommentViewModel");
 const mapSessionStorageToDeviceViewModel_1 = require("../mappers/mapSessionStorageToDeviceViewModel");
+const users_query_repository_1 = require("./users-query-repository");
 function findBlogByPrimaryKey(id) {
     return __awaiter(this, void 0, void 0, function* () {
         return mongo_db_1.bloggersCollection.findOne({ _id: id });
@@ -32,11 +31,11 @@ function findPostByPrimaryKey(id) {
         return mongo_db_1.postsCollection.findOne({ _id: id });
     });
 }
-function findUserByPrimaryKey(id) {
-    return __awaiter(this, void 0, void 0, function* () {
-        return mongo_db_1.usersCollection.findOne({ _id: id });
-    });
-}
+// async function findUserByPrimaryKey(
+//     id: ObjectId,
+// ): Promise<UserCollectionStorageModel | null> {
+//     return usersCollection.findOne({ _id: id });
+// }
 function findCommentByPrimaryKey(id) {
     return __awaiter(this, void 0, void 0, function* () {
         return mongo_db_1.commentsCollection.findOne({ _id: id });
@@ -219,106 +218,137 @@ exports.dataQueryRepository = {
     // *****************************
     // методы для управления юзерами
     // *****************************
-    getSeveralUsers(sentInputGetUsersQuery) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const { searchLoginTerm, searchEmailTerm, sortBy, sortDirection, pageNumber, pageSize, } = sentInputGetUsersQuery;
-            let filter = {};
-            const skip = (pageNumber - 1) * pageSize;
-            try {
-                // добавление первого условия (если было передано)
-                if (searchEmailTerm && searchEmailTerm.trim() !== "") {
-                    // экранируем спецсимволы для безопасного $regex
-                    const escapedSearchTerm = searchEmailTerm
-                        .trim()
-                        .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-                    const additionalFilterCondition = {
-                        email: { $regex: escapedSearchTerm, $options: "i" },
-                    };
-                    if (filter.$or) {
-                        filter.$or.push(additionalFilterCondition);
-                    }
-                    else {
-                        filter = {
-                            $or: [additionalFilterCondition],
-                        };
-                    }
-                }
-                // добавление второго условия (если было передано)
-                if (searchLoginTerm && searchLoginTerm.trim() !== "") {
-                    const escapedSearchTerm = searchLoginTerm
-                        .trim()
-                        .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-                    const additionalFilterCondition = {
-                        login: { $regex: escapedSearchTerm, $options: "i" },
-                    };
-                    if (filter.$or) {
-                        filter.$or.push(additionalFilterCondition);
-                    }
-                    else {
-                        filter = {
-                            $or: [additionalFilterCondition],
-                        };
-                    }
-                }
-            }
-            catch (err) {
-                console.error("Error while processing and adding filtering conditions inside dataQueryRepository.getSeveralUsers: ", err);
-                throw new Error("Error while processing and adding filtering conditions inside dataQueryRepository.getSeveralUsers");
-            }
-            if (!sortBy) {
-                console.error("Error: sortBy is null or undefined inside dataQueryRepository.getSeveralUsers");
-                throw new Error("Error: sortBy is null or undefined inside dataQueryRepository.getSeveralUsers");
-            }
-            const items = yield mongo_db_1.usersCollection
-                .find(filter)
-                // "asc" (по возрастанию), то используется 1
-                // "desc" — то -1 для сортировки по убыванию. - по алфавиту от Я-А, Z-A
-                .sort({ [sortBy]: sortDirection })
-                // пропускаем определённое количество документов перед тем, как вернуть нужный набор данных.
-                .skip(skip)
-                // ограничивает количество возвращаемых документов до значения pageSize
-                .limit(pageSize)
-                .toArray();
-            const totalCount = yield mongo_db_1.usersCollection.countDocuments(filter);
-            return (0, map_paginated_user_search_1.mapToUsersListPaginatedOutput)(items, {
-                pageNumber: pageNumber,
-                pageSize: pageSize,
-                totalCount,
-            });
-        });
-    },
-    findSingleUser(userId) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (mongodb_1.ObjectId.isValid(userId)) {
-                const user = yield findUserByPrimaryKey(new mongodb_1.ObjectId(userId));
-                if (user) {
-                    return (0, map_to_UserViewModel_1.mapSingleUserCollectionToViewModel)(user);
-                }
-            }
-            return undefined;
-        });
-    },
-    findByLoginOrEmail(loginOrEmail) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const result = yield mongo_db_1.usersCollection.findOne({
-                    $or: [{ email: loginOrEmail }, { login: loginOrEmail }],
-                });
-                return result;
-            }
-            catch (error) {
-                console.error('Error finding user by login or email:', error);
-                return null;
-            }
-        });
-    },
+    // async getSeveralUsers(
+    //     sentInputGetUsersQuery: InputGetUsersQuery,
+    // ): Promise<PaginatedUserViewModel> {
+    //     const {
+    //         searchLoginTerm,
+    //         searchEmailTerm,
+    //         sortBy,
+    //         sortDirection,
+    //         pageNumber,
+    //         pageSize,
+    //     } = sentInputGetUsersQuery;
+    //
+    //     let filter: any = {};
+    //     const skip = (pageNumber - 1) * pageSize;
+    //
+    //     try {
+    //         // добавление первого условия (если было передано)
+    //         if (searchEmailTerm && searchEmailTerm.trim() !== "") {
+    //             // экранируем спецсимволы для безопасного $regex
+    //             const escapedSearchTerm = searchEmailTerm
+    //                 .trim()
+    //                 .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    //
+    //             const additionalFilterCondition = {
+    //                 email: { $regex: escapedSearchTerm, $options: "i" },
+    //             };
+    //
+    //             if (filter.$or) {
+    //                 filter.$or.push(additionalFilterCondition);
+    //             } else {
+    //                 filter = {
+    //                     $or: [additionalFilterCondition],
+    //                 };
+    //             }
+    //         }
+    //
+    //         // добавление второго условия (если было передано)
+    //         if (searchLoginTerm && searchLoginTerm.trim() !== "") {
+    //             const escapedSearchTerm = searchLoginTerm
+    //                 .trim()
+    //                 .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    //
+    //             const additionalFilterCondition = {
+    //                 login: { $regex: escapedSearchTerm, $options: "i" },
+    //             };
+    //
+    //             if (filter.$or) {
+    //                 filter.$or.push(additionalFilterCondition);
+    //             } else {
+    //                 filter = {
+    //                     $or: [additionalFilterCondition],
+    //                 };
+    //             }
+    //         }
+    //     } catch (err) {
+    //         console.error(
+    //             "Error while processing and adding filtering conditions inside dataQueryRepository.getSeveralUsers: ",
+    //             err,
+    //         );
+    //         throw new Error(
+    //             "Error while processing and adding filtering conditions inside dataQueryRepository.getSeveralUsers",
+    //         );
+    //     }
+    //
+    //     if (!sortBy) {
+    //         console.error(
+    //             "Error: sortBy is null or undefined inside dataQueryRepository.getSeveralUsers",
+    //         );
+    //         throw new Error(
+    //             "Error: sortBy is null or undefined inside dataQueryRepository.getSeveralUsers",
+    //         );
+    //     }
+    //
+    //     const items: WithId<UserCollectionStorageModel>[] =
+    //         await usersCollection
+    //             .find(filter)
+    //
+    //             // "asc" (по возрастанию), то используется 1
+    //             // "desc" — то -1 для сортировки по убыванию. - по алфавиту от Я-А, Z-A
+    //             .sort({ [sortBy]: sortDirection })
+    //
+    //             // пропускаем определённое количество документов перед тем, как вернуть нужный набор данных.
+    //             .skip(skip)
+    //
+    //             // ограничивает количество возвращаемых документов до значения pageSize
+    //             .limit(pageSize)
+    //             .toArray();
+    //
+    //     const totalCount = await usersCollection.countDocuments(filter);
+    //
+    //     return mapToUsersListPaginatedOutput(items, {
+    //         pageNumber: pageNumber,
+    //         pageSize: pageSize,
+    //         totalCount,
+    //     });
+    // },
+    //
+    // async findSingleUser(userId: string): Promise<UserViewModel | undefined> {
+    //     if (ObjectId.isValid(userId)) {
+    //         const user = await findUserByPrimaryKey(new ObjectId(userId));
+    //
+    //         if (user) {
+    //             return mapSingleUserCollectionToViewModel(user);
+    //         }
+    //     }
+    //
+    //     return undefined;
+    // },
+    //
+    // async findByLoginOrEmail(
+    //     loginOrEmail: string,
+    // ): Promise<WithId<UserCollectionStorageModel> | null> {
+    //     try {
+    //         const result = await usersCollection.findOne({
+    //             $or: [{ email: loginOrEmail }, { login: loginOrEmail }],
+    //         });
+    //
+    //         return result;
+    //     } catch (error) {
+    //         console.error('Error finding user by login or email:', error);
+    //         return null;
+    //     }
+    // },
     // *****************************
     // методы для auth
     // *****************************
+    // ЭТО НАДО ПЕРЕНЕСТИ В UsersQueryRepository, а точнее переделать чтобы использовать оттуда как-то, это работа с юзерами
     findUserForMe(userId) {
         return __awaiter(this, void 0, void 0, function* () {
             if (mongodb_1.ObjectId.isValid(userId)) {
-                const user = yield findUserByPrimaryKey(new mongodb_1.ObjectId(userId));
+                const user = yield (0, users_query_repository_1.findUserByPrimaryKey)(new mongodb_1.ObjectId(userId));
                 if (user) {
                     return (0, map_to_UserMeViewModel_1.mapSingleUserCollectionToMeViewModel)(user);
                 }
@@ -396,9 +426,7 @@ exports.dataQueryRepository = {
             return yield mongo_db_1.bloggersCollection.countDocuments();
         });
     },
-    returnUsersAmount() {
-        return __awaiter(this, void 0, void 0, function* () {
-            return yield mongo_db_1.usersCollection.countDocuments();
-        });
-    },
+    // async returnUsersAmount() {
+    //     return await usersCollection.countDocuments();
+    // },
 };

@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 
 export class BcryptService {
-    static async generateHash(password: string): Promise<string | null> {
+    async generateHash(password: string): Promise<string | null> {
         try {
             const salt = await bcrypt.genSalt(10);
             const hash = await bcrypt.hash(password, salt);
@@ -12,7 +12,7 @@ export class BcryptService {
         }
     }
 
-    static async checkPassword(
+    async checkPassword(
         password: string,
         hash: string,
     ): Promise<boolean | null> {

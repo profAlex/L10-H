@@ -7,6 +7,7 @@ import { UserInputModel } from "../src/routers/router-types/user-input-model";
 import { dataCommandRepository } from "../src/repository-layers/command-repository-layer/command-repository";
 import { dataQueryRepository } from "../src/repository-layers/query-repository-layer/query-repository";
 import { HttpStatus } from "../src/common/http-statuses/http-statuses";
+import { UsersQueryRepository } from "../src/repository-layers/query-repository-layer/users-query-repository";
 
 
 describe("Test API for managing users ", () => {
@@ -71,7 +72,7 @@ describe("Test API for managing users ", () => {
 
     it("GET '/api/users/' - checking simple get-response with empty query params request - should respond with a list of users (4 user entries total)",
         async () => {
-            expect(await dataQueryRepository.returnUsersAmount())
+            expect(await UsersQueryRepository.returnUsersAmount())
                 .toBe(4);
 
             // {
@@ -156,7 +157,7 @@ describe("Test API for managing users ", () => {
 
     it("GET '/api/users/' - checking get-response with custom query params request - should respond with a list of users (total 3 user entries, 2 entries per page, 2 pages total)",
         async () => {
-            expect(await dataQueryRepository.returnUsersAmount())
+            expect(await UsersQueryRepository.returnUsersAmount())
                 .toBe(4);
 
             // {
@@ -240,7 +241,7 @@ describe("Test API for managing users ", () => {
 
     it("GET '/api/users/' - checking get-response with custom query params request with errors (wrong value in field sortBy) - should respond with error 400",
         async () => {
-            expect(await dataQueryRepository.returnUsersAmount())
+            expect(await UsersQueryRepository.returnUsersAmount())
                 .toBe(4);
 
             const res = await request(testApp)
@@ -258,7 +259,7 @@ describe("Test API for managing users ", () => {
         });
 
     it("GET '/api/users/' - checking get-response with wrong credentials - should respond with error 401", async () => {
-        expect(await dataQueryRepository.returnUsersAmount())
+        expect(await UsersQueryRepository.returnUsersAmount())
             .toBe(4);
 
         const res = await request(testApp)
@@ -352,7 +353,7 @@ describe("Test API for managing users ", () => {
 
     it("DELETE '/api/users/{id}' - shouldn't be able to delete a user because of incorrect login/password pair (Error - Unauthorized 401)",
         async () => {
-            expect(await dataQueryRepository.returnUsersAmount())
+            expect(await UsersQueryRepository.returnUsersAmount())
                 .toBe(5);
 
             const res = await request(testApp)
@@ -361,7 +362,7 @@ describe("Test API for managing users ", () => {
             expect(res.status)
                 .toBe(HttpStatus.Unauthorized);
 
-            expect(await dataQueryRepository.returnUsersAmount())
+            expect(await UsersQueryRepository.returnUsersAmount())
                 .toBe(5);
 
             const anotherRes = await request(testApp)
@@ -370,13 +371,13 @@ describe("Test API for managing users ", () => {
             expect(anotherRes.status)
                 .toBe(HttpStatus.Unauthorized);
 
-            expect(await dataQueryRepository.returnUsersAmount())
+            expect(await UsersQueryRepository.returnUsersAmount())
                 .toBe(5);
         });
 
     it("DELETE '/api/users/{id}' - shouldn't be able to delete a user entry because of incorrect ID (Error - Not found 404)",
         async () => {
-            expect(await dataQueryRepository.returnUsersAmount())
+            expect(await UsersQueryRepository.returnUsersAmount())
                 .toBe(5);
 
             const res = await request(testApp)
@@ -385,12 +386,12 @@ describe("Test API for managing users ", () => {
             expect(res.status)
                 .toBe(HttpStatus.NotFound);
 
-            expect(await dataQueryRepository.returnUsersAmount())
+            expect(await UsersQueryRepository.returnUsersAmount())
                 .toBe(5);
         });
 
     it("DELETE '/api/users/{id}' - should correctly delete a user entry", async () => {
-        expect(await dataQueryRepository.returnUsersAmount())
+        expect(await UsersQueryRepository.returnUsersAmount())
             .toBe(5);
 
         const res = await request(testApp)
@@ -399,7 +400,7 @@ describe("Test API for managing users ", () => {
         expect(res.status)
             .toBe(HttpStatus.NoContent);
 
-        expect(await dataQueryRepository.returnUsersAmount())
+        expect(await UsersQueryRepository.returnUsersAmount())
             .toBe(4);
     });
 });

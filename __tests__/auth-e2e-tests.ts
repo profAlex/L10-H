@@ -6,7 +6,6 @@ import { AUTH_PATH, TESTING_PATH } from "../src/routers/pathes/router-pathes";
 import { UserInputModel } from "../src/routers/router-types/user-input-model";
 import { dataCommandRepository } from "../src/repository-layers/command-repository-layer/command-repository";
 import { HttpStatus } from "../src/common/http-statuses/http-statuses";
-import { dataQueryRepository } from "../src/repository-layers/query-repository-layer/query-repository";
 import { RegistrationUserInputModel } from "../src/routers/router-types/auth-registration-input-model";
 import { mailerService } from "../src/adapters/email-sender/mailer-service";
 import { ResentRegistrationConfirmationInput } from "../src/routers/router-types/auth-resent-registration-confirmation-input-model";
@@ -14,6 +13,7 @@ import { UUIDgeneration } from "../src/adapters/randomUUIDgeneration/UUIDgenerat
 import { LoginInputModel } from "../src/routers/router-types/login-input-model";
 import jwt from "jsonwebtoken";
 import { envConfig } from "../src/config";
+import { UsersQueryRepository } from "../src/repository-layers/query-repository-layer/users-query-repository";
 
 describe("Test API for managing login, registration and registration-confirmation services", () => {
     const testApp = express();
@@ -43,6 +43,7 @@ describe("Test API for managing login, registration and registration-confirmatio
     // let loginCreds_2 = {};
 
     beforeEach(() => {
+
         // мокаем возвращаемое значение для некоторых тестируемых здесь функций, относящихся в первую очередь к работе с почтовым сервисом
         // это нужно делать в блоке beforeEach, иначе шпион будет накапливать статистику вызовов
         // глобально внутри всего describe, и это будет сбивать логику проверок
@@ -62,6 +63,8 @@ describe("Test API for managing login, registration and registration-confirmatio
     });
 
     it("Creating test user entries, directly without endpoint calls", async () => {
+
+
         const newUser_1: UserInputModel = {
             login: "hello_wr",
             password: "hello_world",
@@ -102,7 +105,7 @@ describe("Test API for managing login, registration and registration-confirmatio
     });
 
     it("POST '/api/auth/login' - successful login attempt (response 200)", async () => {
-        expect(await dataQueryRepository.returnUsersAmount()).toBe(2);
+        expect(await UsersQueryRepository.returnUsersAmount()).toBe(2);
 
         const loginCreds_1 = {
             loginOrEmail: "hello_w2",
@@ -123,7 +126,7 @@ describe("Test API for managing login, registration and registration-confirmatio
     });
 
     it("POST '/api/auth/login' - unsuccessful login attempt (response 401)", async () => {
-        expect(await dataQueryRepository.returnUsersAmount()).toBe(2);
+        expect(await UsersQueryRepository.returnUsersAmount()).toBe(2);
 
         const loginCreds_2 = {
             loginOrEmail: "wrong_log",
@@ -140,7 +143,7 @@ describe("Test API for managing login, registration and registration-confirmatio
     });
 
     it("GET '/api/auth/me' - unsuccessful request (response 401) because of incorrect token sent", async () => {
-        expect(await dataQueryRepository.returnUsersAmount()).toBe(2);
+        expect(await UsersQueryRepository.returnUsersAmount()).toBe(2);
 
         const res = await request(testApp)
             .get(`${AUTH_PATH}/me`)
@@ -152,7 +155,7 @@ describe("Test API for managing login, registration and registration-confirmatio
     });
 
     it("POST '/api/auth/registration' - attempt to register via email (successful)", async () => {
-        expect(await dataQueryRepository.returnUsersAmount()).toBe(2);
+        expect(await UsersQueryRepository.returnUsersAmount()).toBe(2);
 
         const newUserToRegisterViaEmail: RegistrationUserInputModel = {
             login: "new_login",
@@ -194,7 +197,7 @@ describe("Test API for managing login, registration and registration-confirmatio
     //             .post(`${AUTH_PATH}/registration`)
     //             .send(newUserToRegisterViaEmail);
     //
-    //         // const mockedServiceCall = AuthService.registerNewUser;
+    //         // const mockedServiceCall = AuthCommandService.registerNewUser;
     //
     //         expect(res.status)
     //             .toBe(HttpStatus.NoContent);
@@ -207,7 +210,7 @@ describe("Test API for managing login, registration and registration-confirmatio
     // );
 
     it("POST '/api/auth/registration' - attempt to register via email (not successful)", async () => {
-        expect(await dataQueryRepository.returnUsersAmount()).toBe(3);
+        expect(await UsersQueryRepository.returnUsersAmount()).toBe(3);
 
         const newUserToRegisterViaEmail: RegistrationUserInputModel = {
             login: "hello_wr",
@@ -231,7 +234,7 @@ describe("Test API for managing login, registration and registration-confirmatio
             .post(`${AUTH_PATH}/registration`)
             .send(newUserToRegisterViaEmail1);
 
-        // const mockedServiceCall = AuthService.registerNewUser;
+        // const mockedServiceCall = AuthCommandService.registerNewUser;
 
         expect(res.status).toBe(HttpStatus.BadRequest);
         expect(res1.status).toBe(HttpStatus.BadRequest);
@@ -243,7 +246,7 @@ describe("Test API for managing login, registration and registration-confirmatio
     });
 
     it("POST '/api/auth/registration-confirmation' - attempt to confirm registration by sending and accepting registration code (successful)", async () => {
-        expect(await dataQueryRepository.returnUsersAmount()).toBe(3);
+        expect(await UsersQueryRepository.returnUsersAmount()).toBe(3);
 
         const resentEmail: ResentRegistrationConfirmationInput = {
             email: "geniusb198@yandex.ru",
@@ -262,7 +265,7 @@ describe("Test API for managing login, registration and registration-confirmatio
     });
 
     it("POST '/api/auth/registration-confirmation' - attempt to confirm registration by sending and accepting registration code (not successful, cuz incorrect email)", async () => {
-        expect(await dataQueryRepository.returnUsersAmount()).toBe(3);
+        expect(await UsersQueryRepository.returnUsersAmount()).toBe(3);
 
         const resentEmail: ResentRegistrationConfirmationInput = {
             email: "tesssst_email@yandex.com",
@@ -282,7 +285,7 @@ describe("Test API for managing login, registration and registration-confirmatio
     });
 
     it("POST '/api/auth/registration-email-resending' - attempt to resend registration code (successful)", async () => {
-        expect(await dataQueryRepository.returnUsersAmount()).toBe(3);
+        expect(await UsersQueryRepository.returnUsersAmount()).toBe(3);
 
         const newUserToRegisterViaEmail: RegistrationUserInputModel = {
             login: "another",
@@ -312,7 +315,7 @@ describe("Test API for managing login, registration and registration-confirmatio
     });
 
     it("POST '/api/auth/registration-email-resending' - attempt to resend registration code (not successful)", async () => {
-        expect(await dataQueryRepository.returnUsersAmount()).toBe(4);
+        expect(await UsersQueryRepository.returnUsersAmount()).toBe(4);
 
         const newUserToRegisterViaEmail: RegistrationUserInputModel = {
             login: "a1other",
@@ -345,7 +348,7 @@ describe("Test API for managing login, registration and registration-confirmatio
     //********************************************************************************
 
     it("POST '/api/auth/refresh-token' - attempt to refresh token (successful)", async () => {
-        expect(await dataQueryRepository.returnUsersAmount()).toBe(5);
+        expect(await UsersQueryRepository.returnUsersAmount()).toBe(5);
 
         // это существующие креды, создавали в первом it
         const loginData: LoginInputModel = {
@@ -478,7 +481,7 @@ describe("Test API for managing login, registration and registration-confirmatio
     });
 
     it("POST '/api/auth/logout' - attempt to logout (successful)", async () => {
-        expect(await dataQueryRepository.returnUsersAmount()).toBe(5);
+        expect(await UsersQueryRepository.returnUsersAmount()).toBe(5);
 
         const loginData: LoginInputModel = {
             loginOrEmail: "hello_w2",

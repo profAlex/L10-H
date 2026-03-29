@@ -60,7 +60,8 @@ const createNewPost = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.createNewPost = createNewPost;
 const findSinglePost = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield query_repository_1.dataQueryRepository.findSinglePost(req.params[id_names_1.IdParamName.PostId]);
+    const postId = typeof req.params[id_names_1.IdParamName.PostId] === 'string' ? req.params[id_names_1.IdParamName.PostId] : req.params[id_names_1.IdParamName.PostId][0];
+    const result = yield query_repository_1.dataQueryRepository.findSinglePost(postId);
     if (result === undefined) {
         res.sendStatus(http_statuses_1.HttpStatus.NotFound);
     }
@@ -68,7 +69,8 @@ const findSinglePost = (req, res) => __awaiter(void 0, void 0, void 0, function*
 });
 exports.findSinglePost = findSinglePost;
 const updatePost = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield posts_service_1.postsService.updatePost(req.params[id_names_1.IdParamName.PostId], req.body);
+    const postId = typeof req.params[id_names_1.IdParamName.PostId] === 'string' ? req.params[id_names_1.IdParamName.PostId] : req.params[id_names_1.IdParamName.PostId][0];
+    const result = yield posts_service_1.postsService.updatePost(postId, req.body);
     if (result === undefined) {
         res.sendStatus(http_statuses_1.HttpStatus.NotFound);
     }
@@ -76,7 +78,8 @@ const updatePost = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
 });
 exports.updatePost = updatePost;
 const deletePost = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield posts_service_1.postsService.deletePost(req.params[id_names_1.IdParamName.PostId]);
+    const postId = typeof req.params[id_names_1.IdParamName.PostId] === 'string' ? req.params[id_names_1.IdParamName.PostId] : req.params[id_names_1.IdParamName.PostId][0];
+    const result = yield posts_service_1.postsService.deletePost(postId);
     if (result === undefined) {
         res.sendStatus(http_statuses_1.HttpStatus.NotFound);
     }

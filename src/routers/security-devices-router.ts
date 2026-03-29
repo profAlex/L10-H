@@ -1,30 +1,25 @@
 import { Router } from "express";
 import { IdParamName } from "./util-enums/id-names";
-import { refreshTokenGuard } from "./guard-middleware/refresh-token-guard";
 import { validateDeviceId } from "./validation-middleware/security-device-deviceId-validation";
-import {
-    getDevicesList,
-    removeAllButOneSession,
-    removeSessionById
-} from "./router-handlers/security-devices-router-description";
+import { refreshTokenGuardInstance, securityDevicesHandler } from "../composition-root/composition-root";
 
 export const securityDevicesRouter = Router();
 
 securityDevicesRouter.delete(
     `/:${IdParamName.DeviceId}`,
-    refreshTokenGuard,
+    refreshTokenGuardInstance.refreshTokenGuard,
     validateDeviceId,
-    removeSessionById,
+    securityDevicesHandler.removeSessionById,
 );
 
 securityDevicesRouter.delete(
     `/`,
-    refreshTokenGuard,
-    removeAllButOneSession,
+    refreshTokenGuardInstance.refreshTokenGuard,
+    securityDevicesHandler.removeAllButOneSession,
 );
 
 securityDevicesRouter.get(
     `/`,
-    refreshTokenGuard,
-    getDevicesList,
+    refreshTokenGuardInstance.refreshTokenGuard,
+    securityDevicesHandler.getDevicesList,
 );

@@ -18,7 +18,8 @@ function createIdValidator(paramKey, // например, "postId"
 collectionName) {
     return (req, // используем стандартный Request из Express
     res, next) => __awaiter(this, void 0, void 0, function* () {
-        const sentId = req.params[paramKey]; // динамический доступ
+        // const sentId = req.params[paramKey]; // динамический доступ
+        const sentId = typeof req.params[paramKey] === 'string' ? req.params[paramKey] : req.params[paramKey][0];
         if (yield validateId(sentId, collectionName, res)) {
             next();
         }

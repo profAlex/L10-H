@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { AuthService } from "../../service-layer(BLL)/auth-service";
+import { AuthCommandService } from "../../service-layer(BLL)/auth-command-service";
 import { CustomResult } from "../../common/result-type/result-type";
 import { HttpStatus } from "../../common/http-statuses/http-statuses";
 import {
@@ -16,12 +16,14 @@ import { RotationPairToken } from "../../adapters/verification/auth-token-rotati
 
 export class AuthHandler {
 
+    constructor(protected authCommandService:AuthCommandService){};
+
     public attemptToLogin = async (
         req: RequestWithBody<AuthLoginInputModel>,
         res: Response,
     ) => {
         const loginResult: CustomResult<RotationPairToken> =
-            await AuthService.loginUser(req, res);
+            await this.authCommandService.loginUser(req, res);
 
         if (!loginResult.data) {
             console.error(
@@ -72,7 +74,7 @@ export class AuthHandler {
         res: Response,
     ) => {
         const confirmationResult: CustomResult =
-            await AuthService.confirmRegistrationCode(req.body);
+            await this.authCommandService.confirmRegistrationCode(req.body);
 
         if (confirmationResult.statusCode !== HttpStatus.NoContent) {
             console.error(
@@ -94,7 +96,7 @@ export class AuthHandler {
         res: Response,
     ) => {
         // const { loginOrEmail, password } = req.body;
-        const registrationResult: CustomResult = await AuthService.registerNewUser(
+        const registrationResult: CustomResult = await this.authCommandService.registerNewUser(
             req.body,
         );
 
@@ -123,7 +125,7 @@ export class AuthHandler {
         res: Response,
     ) => {
         const resentConfirmationResult: CustomResult =
-            await AuthService.resendConfirmRegistrationCode(req.body);
+            await this.authCommandService.resendConfirmRegistrationCode(req.body);
 
         if (resentConfirmationResult.statusCode !== HttpStatus.NoContent) {
             console.error(
@@ -141,7 +143,7 @@ export class AuthHandler {
     }
 
     public refreshTokenOnDemand = async (req: Request, res: Response) => {
-        const pairOfTokens = await AuthService.refreshTokenOnDemand(
+        const pairOfTokens = await this.authCommandService.refreshTokenOnDemand(
             // req.cookies.refreshToken,
             req.deviceId!,
             req.user!.userId!,
@@ -171,7 +173,7 @@ export class AuthHandler {
     public logoutOnDemand = async (req: Request, res: Response) => {
         // const oldRefreshToken = req.cookies.refreshToken;
 
-        const logoutResult = await AuthService.logoutOnDemand(
+        const logoutResult = await this.authCommandService.logoutOnDemand(
             // oldRefreshToken,
             req.user!.userId!,
             req.sessionId!,
@@ -190,7 +192,7 @@ export class AuthHandler {
 //     res: Response,
 // ) => {
 //     const loginResult: CustomResult<RotationPairToken> =
-//         await AuthService.loginUser(req, res);
+//         await AuthCommandService.loginUser(req, res);
 //
 //     if (!loginResult.data) {
 //         console.error(
@@ -241,7 +243,7 @@ export class AuthHandler {
 //     res: Response,
 // ) => {
 //     const confirmationResult: CustomResult =
-//         await AuthService.confirmRegistrationCode(req.body);
+//         await AuthCommandService.confirmRegistrationCode(req.body);
 //
 //     if (confirmationResult.statusCode !== HttpStatus.NoContent) {
 //         console.error(
@@ -263,7 +265,7 @@ export class AuthHandler {
 //     res: Response,
 // ) => {
 //     // const { loginOrEmail, password } = req.body;
-//     const registrationResult: CustomResult = await AuthService.registerNewUser(
+//     const registrationResult: CustomResult = await AuthCommandService.registerNewUser(
 //         req.body,
 //     );
 //
@@ -292,7 +294,7 @@ export class AuthHandler {
 //     res: Response,
 // ) => {
 //     const resentConfirmationResult: CustomResult =
-//         await AuthService.resendConfirmRegistrationCode(req.body);
+//         await AuthCommandService.resendConfirmRegistrationCode(req.body);
 //
 //     if (resentConfirmationResult.statusCode !== HttpStatus.NoContent) {
 //         console.error(
@@ -310,7 +312,7 @@ export class AuthHandler {
 // };
 //
 // export const refreshTokenOnDemand = async (req: Request, res: Response) => {
-//     const pairOfTokens = await AuthService.refreshTokenOnDemand(
+//     const pairOfTokens = await AuthCommandService.refreshTokenOnDemand(
 //         // req.cookies.refreshToken,
 //         req.deviceId!,
 //         req.user!.userId!,
@@ -340,7 +342,7 @@ export class AuthHandler {
 // export const logoutOnDemand = async (req: Request, res: Response) => {
 //     // const oldRefreshToken = req.cookies.refreshToken;
 //
-//     const logoutResult = await AuthService.logoutOnDemand(
+//     const logoutResult = await AuthCommandService.logoutOnDemand(
 //         // oldRefreshToken,
 //         req.user!.userId!,
 //         req.sessionId!,

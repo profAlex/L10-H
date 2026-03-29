@@ -85,8 +85,10 @@ export const createNewPost = async (req: Request, res: Response) => {
 };
 
 export const findSinglePost = async (req: Request, res: Response) => {
+
+    const postId: string = typeof req.params[IdParamName.PostId] === 'string' ? req.params[IdParamName.PostId] : req.params[IdParamName.PostId][0];
     const result = await dataQueryRepository.findSinglePost(
-        req.params[IdParamName.PostId],
+        postId,
     );
 
     if (result === undefined) {
@@ -97,8 +99,10 @@ export const findSinglePost = async (req: Request, res: Response) => {
 };
 
 export const updatePost = async (req: Request, res: Response) => {
+
+    const postId: string = typeof req.params[IdParamName.PostId] === 'string' ? req.params[IdParamName.PostId] : req.params[IdParamName.PostId][0];
     const result = await postsService.updatePost(
-        req.params[IdParamName.PostId],
+        postId,
         req.body,
     );
 
@@ -110,8 +114,10 @@ export const updatePost = async (req: Request, res: Response) => {
 };
 
 export const deletePost = async (req: Request, res: Response) => {
+
+    const postId: string = typeof req.params[IdParamName.PostId] === 'string' ? req.params[IdParamName.PostId] : req.params[IdParamName.PostId][0];
     const result = await postsService.deletePost(
-        req.params[IdParamName.PostId],
+        postId,
     );
 
     if (result === undefined) {

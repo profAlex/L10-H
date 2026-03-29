@@ -9,8 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AuthService = void 0;
-const bcrypt_service_1 = require("../adapters/authentication/bcrypt-service");
+exports.AuthCommandService = void 0;
 const http_statuses_1 = require("../common/http-statuses/http-statuses");
 const command_repository_1 = require("../repository-layers/command-repository-layer/command-repository");
 const mongodb_1 = require("mongodb");
@@ -19,13 +18,17 @@ const mailer_service_1 = require("../adapters/email-sender/mailer-service");
 const utility_token_pairs_creation_1 = require("../adapters/verification/utility-token-pairs-creation");
 const session_class_1 = require("../common/classes/session-class");
 const config_1 = require("../config");
-const composition_root_1 = require("../composition-root/composition-root");
-class AuthService {
-    static loginUser(req, res) {
+class AuthCommandService {
+    constructor(usersQueryRepository, sessionsCommandRepository, bcryptService) {
+        this.usersQueryRepository = usersQueryRepository;
+        this.sessionsCommandRepository = sessionsCommandRepository;
+        this.bcryptService = bcryptService;
+    }
+    loginUser(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             const { loginOrEmail, password } = req.body;
             // проверяем что пользователь с указанным логином/емейлом уже существует в базе
-            const user = yield composition_root_1.usersQueryRepository.findByLoginOrEmail(loginOrEmail);
+            const user = yield this.usersQueryRepository.findByLoginOrEmail(loginOrEmail);
             if (!user) {
                 return {
                     data: null,
@@ -79,7 +82,7 @@ class AuthService {
             // здесь логика у нас следующая
             // - в любом случае создаем новую сессию со всеми присущими определенными идентификаторами и параметрами
             // создаем сессию в базе
-            const isSuccessfulSessionCreated = yield composition_root_1.sessionsCommandRepository.createSession(tempSession);
+            const isSuccessfulSessionCreated = yield this.sessionsCommandRepository.createSession(tempSession);
             if (!isSuccessfulSessionCreated) {
                 console.error("Error inside loginUser -> dataCommandRepository.createSession(tempSession)");
                 return {
@@ -109,7 +112,7 @@ class AuthService {
         });
     }
     // пробуем зарегистрировать возвращенный от юзера код подтверждения
-    static confirmRegistrationCode(sentData) {
+    confirmRegistrationCode(sentData) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 return yield command_repository_1.dataCommandRepository.confirmRegistrationCode(sentData);
@@ -118,7 +121,7 @@ class AuthService {
                 return {
                     data: null,
                     statusCode: http_statuses_1.HttpStatus.InternalServerError,
-                    statusDescription: "Unknown error in AuthService -> confirmRegistrationCode",
+                    statusDescription: "Unknown error in AuthCommandService -> confirmRegistrationCode",
                     errorsMessages: [
                         {
                             field: "",
@@ -130,7 +133,7 @@ class AuthService {
         });
     }
     // пробуем зарегистрировать пользователя по его запросу (т.е. по запросу фронта)
-    static registerNewUser(sentData) {
+    registerNewUser(sentData) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const ifUserLoginExists = yield command_repository_1.dataCommandRepository.findByLoginOrEmail(sentData.login);
@@ -139,10 +142,10 @@ class AuthService {
                     return {
                         data: null,
                         statusCode: http_statuses_1.HttpStatus.BadRequest,
-                        statusDescription: "AuthService -> registerNewUser -> if(ifUserLoginExists)",
+                        statusDescription: "AuthCommandService -> registerNewUser -> if(ifUserLoginExists)",
                         errorsMessages: [
                             {
-                                field: "AuthService -> registerNewUser -> if(ifUserLoginExists)",
+                                field: "AuthCommandService -> registerNewUser -> if(ifUserLoginExists)",
                                 message: "Email or Login already exists!!!",
                             },
                         ],
@@ -152,7 +155,7 @@ class AuthService {
                     return {
                         data: null,
                         statusCode: http_statuses_1.HttpStatus.BadRequest,
-                        statusDescription: "AuthService -> registerNewUser -> if(ifUserEmailExists)",
+                        statusDescription: "AuthCommandService -> registerNewUser -> if(ifUserEmailExists)",
                         errorsMessages: [
                             {
                                 field: "email",
@@ -161,7 +164,7 @@ class AuthService {
                         ],
                     };
                 }
-                const passwordHash = yield bcrypt_service_1.BcryptService.generateHash(sentData.password);
+                const passwordHash = yield this.bcryptService.generateHash(sentData.password);
                 if (!passwordHash) {
                     return {
                         data: null,
@@ -230,7 +233,7 @@ class AuthService {
                 return {
                     data: null,
                     statusCode: http_statuses_1.HttpStatus.InternalServerError,
-                    statusDescription: "Unknown error in AuthService -> registerNewUser",
+                    statusDescription: "Unknown error in AuthCommandService -> registerNewUser",
                     errorsMessages: [
                         {
                             field: "",
@@ -242,7 +245,7 @@ class AuthService {
         });
     }
     // запрос на повторную отправку email с подтверждением регистрационного кода
-    static resendConfirmRegistrationCode(sentData) {
+    resendConfirmRegistrationCode(sentData) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 // const allUsersList = await dataCommandRepository.findAllUsers();
@@ -252,7 +255,7 @@ class AuthService {
                     return {
                         data: null,
                         statusCode: http_statuses_1.HttpStatus.BadRequest,
-                        statusDescription: "AuthService -> resendConfirmRegistrationCode -> if (isUserInDatabase)",
+                        statusDescription: "AuthCommandService -> resendConfirmRegistrationCode -> if (isUserInDatabase)",
                         errorsMessages: [
                             {
                                 field: "email",
@@ -267,7 +270,7 @@ class AuthService {
                 return {
                     data: null,
                     statusCode: http_statuses_1.HttpStatus.InternalServerError,
-                    statusDescription: "Unknown error in AuthService -> resendConfirmRegistrationCode",
+                    statusDescription: "Unknown error in AuthCommandService -> resendConfirmRegistrationCode",
                     errorsMessages: [
                         {
                             field: "",
@@ -279,7 +282,7 @@ class AuthService {
         });
     }
     // обновляет сессию, генерирует и возвращает два токена
-    static refreshTokenOnDemand(deviceId, userId, sessionId) {
+    refreshTokenOnDemand(deviceId, userId, sessionId) {
         return __awaiter(this, void 0, void 0, function* () {
             // const sessionData = await findSessionByPrimaryKey(sessionId);
             // формируем новые даты exp и iat
@@ -291,7 +294,7 @@ class AuthService {
             // Устанавливаем expiresAt на основе той же базовой временной метки
             const expiresAt = new Date(issuedAt.getTime() + config_1.envConfig.refreshTokenLifetime * 1000);
             // обновляем данные в базе сессий
-            const isSessionUpdated = yield composition_root_1.sessionsCommandRepository.updateSession(expiresAt, issuedAt, sessionId);
+            const isSessionUpdated = yield this.sessionsCommandRepository.updateSession(expiresAt, issuedAt, sessionId);
             if (!isSessionUpdated) {
                 console.error("Couldn't update session data");
                 return {
@@ -300,7 +303,7 @@ class AuthService {
                     statusDescription: "Couldn't update session data",
                     errorsMessages: [
                         {
-                            field: "AuthService -> refreshTokenOnDemand -> dataCommandRepository.updateSession(expiresAt, issuedAt, sessionId)",
+                            field: "AuthCommandService -> refreshTokenOnDemand -> dataCommandRepository.updateSession(expiresAt, issuedAt, sessionId)",
                             message: "Couldn't update session data",
                         },
                     ],
@@ -339,7 +342,7 @@ class AuthService {
             //             "Couldn't insert outdated refresh token into the blacklist",
             //         errorsMessages: [
             //             {
-            //                 field: "AuthService -> refreshTokenOnDemand -> if (!ifSucessfullyAddedToBlackList)",
+            //                 field: "AuthCommandService -> refreshTokenOnDemand -> if (!ifSucessfullyAddedToBlackList)",
             //                 message:
             //                     "Couldn't insert outdated refresh token into the blacklist",
             //             },
@@ -349,7 +352,7 @@ class AuthService {
             return pairOfToken;
         });
     }
-    static logoutOnDemand(
+    logoutOnDemand(
     // oldRefreshToken: string,
     relatedUserId, sessionId) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -358,20 +361,20 @@ class AuthService {
             //         refreshToken: oldRefreshToken,
             //         relatedUserId: relatedUserId,
             //     });
-            const ifLoggedOutSuccessfully = yield composition_root_1.sessionsCommandRepository.removeSessionBySessionId(sessionId);
+            const ifLoggedOutSuccessfully = yield this.sessionsCommandRepository.removeSessionBySessionId(sessionId);
             return ifLoggedOutSuccessfully;
         });
     }
     // вспомогательная функция
-    static checkUserCredentials(password, passwordHash) {
+    checkUserCredentials(password, passwordHash) {
         return __awaiter(this, void 0, void 0, function* () {
-            return bcrypt_service_1.BcryptService.checkPassword(password, passwordHash);
+            return this.bcryptService.checkPassword(password, passwordHash);
         });
     }
 }
-exports.AuthService = AuthService;
+exports.AuthCommandService = AuthCommandService;
 ;
-// export const AuthService = {
+// export const AuthCommandService = {
 //     async loginUser(
 //         req: RequestWithBody<AuthLoginInputModel>,
 //         res: Response,
@@ -503,7 +506,7 @@ exports.AuthService = AuthService;
 //                 data: null,
 //                 statusCode: HttpStatus.InternalServerError,
 //                 statusDescription:
-//                     "Unknown error in AuthService -> confirmRegistrationCode",
+//                     "Unknown error in AuthCommandService -> confirmRegistrationCode",
 //                 errorsMessages: [
 //                     {
 //                         field: "",
@@ -529,10 +532,10 @@ exports.AuthService = AuthService;
 //                     data: null,
 //                     statusCode: HttpStatus.BadRequest,
 //                     statusDescription:
-//                         "AuthService -> registerNewUser -> if(ifUserLoginExists)",
+//                         "AuthCommandService -> registerNewUser -> if(ifUserLoginExists)",
 //                     errorsMessages: [
 //                         {
-//                             field: "AuthService -> registerNewUser -> if(ifUserLoginExists)",
+//                             field: "AuthCommandService -> registerNewUser -> if(ifUserLoginExists)",
 //                             message: "Email or Login already exists!!!",
 //                         },
 //                     ],
@@ -543,7 +546,7 @@ exports.AuthService = AuthService;
 //                     data: null,
 //                     statusCode: HttpStatus.BadRequest,
 //                     statusDescription:
-//                         "AuthService -> registerNewUser -> if(ifUserEmailExists)",
+//                         "AuthCommandService -> registerNewUser -> if(ifUserEmailExists)",
 //                     errorsMessages: [
 //                         {
 //                             field: "email",
@@ -649,7 +652,7 @@ exports.AuthService = AuthService;
 //                 data: null,
 //                 statusCode: HttpStatus.InternalServerError,
 //                 statusDescription:
-//                     "Unknown error in AuthService -> registerNewUser",
+//                     "Unknown error in AuthCommandService -> registerNewUser",
 //                 errorsMessages: [
 //                     {
 //                         field: "",
@@ -679,7 +682,7 @@ exports.AuthService = AuthService;
 //                     data: null,
 //                     statusCode: HttpStatus.BadRequest,
 //                     statusDescription:
-//                         "AuthService -> resendConfirmRegistrationCode -> if (isUserInDatabase)",
+//                         "AuthCommandService -> resendConfirmRegistrationCode -> if (isUserInDatabase)",
 //                     errorsMessages: [
 //                         {
 //                             field: "email",
@@ -698,7 +701,7 @@ exports.AuthService = AuthService;
 //                 data: null,
 //                 statusCode: HttpStatus.InternalServerError,
 //                 statusDescription:
-//                     "Unknown error in AuthService -> resendConfirmRegistrationCode",
+//                     "Unknown error in AuthCommandService -> resendConfirmRegistrationCode",
 //                 errorsMessages: [
 //                     {
 //                         field: "",
@@ -742,7 +745,7 @@ exports.AuthService = AuthService;
 //                 statusDescription: "Couldn't update session data",
 //                 errorsMessages: [
 //                     {
-//                         field: "AuthService -> refreshTokenOnDemand -> dataCommandRepository.updateSession(expiresAt, issuedAt, sessionId)",
+//                         field: "AuthCommandService -> refreshTokenOnDemand -> dataCommandRepository.updateSession(expiresAt, issuedAt, sessionId)",
 //                         message: "Couldn't update session data",
 //                     },
 //                 ],
@@ -787,7 +790,7 @@ exports.AuthService = AuthService;
 //         //             "Couldn't insert outdated refresh token into the blacklist",
 //         //         errorsMessages: [
 //         //             {
-//         //                 field: "AuthService -> refreshTokenOnDemand -> if (!ifSucessfullyAddedToBlackList)",
+//         //                 field: "AuthCommandService -> refreshTokenOnDemand -> if (!ifSucessfullyAddedToBlackList)",
 //         //                 message:
 //         //                     "Couldn't insert outdated refresh token into the blacklist",
 //         //             },

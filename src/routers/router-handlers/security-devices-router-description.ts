@@ -5,58 +5,68 @@ import {
 } from "../request-types/request-types";
 import { IdParamName } from "../util-enums/id-names";
 import { HttpStatus } from "../../common/http-statuses/http-statuses";
-import { securityDevicesService } from "../../service-layer(BLL)/security-devices-service";
+import { SecurityDevicesCommandService } from "../../service-layer(BLL)/security-devices-command-service";
 import { SessionMetaDataType } from "../router-types/user-id-type";
 import { DeviceViewModel } from "../router-types/security-devices-device-view-model";
 
-export const removeSessionById = async (
-    req: RequestWithParamsAndSessionMetaData<
-        {
-            [IdParamName.DeviceId]: string;
-        },
-        SessionMetaDataType
-    >,
-    res: Response,
-) => {
-    const result = await securityDevicesService.removeSessionById(
-        req.params[IdParamName.DeviceId],
-    );
+export class SecurityDevicesHandler {
+    constructor(
+        protected securityDevicesCommandService: SecurityDevicesCommandService,
+    ) {}
 
-    if (result === undefined) {
-        res.sendStatus(HttpStatus.NotFound);
-    }
+    public removeSessionById = async (
+        req: RequestWithParamsAndSessionMetaData<
+            {
+                [IdParamName.DeviceId]: string;
+            },
+            SessionMetaDataType
+        >,
+        res: Response,
+    ) => {
+        const result =
+            await this.securityDevicesCommandService.removeSessionById(
+                req.params[IdParamName.DeviceId],
+            );
 
-    res.sendStatus(HttpStatus.NoContent);
-};
+        if (result === undefined) {
+            res.sendStatus(HttpStatus.NotFound);
+        }
 
-export const removeAllButOneSession = async (
-    req: RequestWithSessionMetaData<SessionMetaDataType>,
-    res: Response,
-) => {
-    const result = await securityDevicesService.removeAllButOneSession(
-        req.sessionId!,
-        req.user!.userId!,
-    );
+        res.sendStatus(HttpStatus.NoContent);
+    };
 
-    if (result === undefined) {
-        res.status(HttpStatus.InternalServerError).json({
-            error: "Internal server error during await securityDevicesService.removeAllButOneSession(req.sessionId!, req.user!.userId!) inside removeAllButOneSession",
-        });
-    }
-    res.sendStatus(HttpStatus.NoContent);
-};
+    public removeAllButOneSession = async (
+        req: RequestWithSessionMetaData<SessionMetaDataType>,
+        res: Response,
+    ) => {
+        const result =
+            await this.securityDevicesCommandService.removeAllButOneSession(
+                req.sessionId!,
+                req.user!.userId!,
+            );
 
-export const getDevicesList = async (
-    req: RequestWithSessionMetaData<SessionMetaDataType>,
-    res: Response,
-) => {
-    const activeDevicesList: Array<DeviceViewModel> =
-        await securityDevicesService.getActiveDevicesList(req.user!.userId!);
+        if (result === undefined) {
+            res.status(HttpStatus.InternalServerError).json({
+                error: "Internal server error during await securityDevicesCommandService.removeAllButOneSession(req.sessionId!, req.user!.userId!) inside removeAllButOneSession",
+            });
+        }
+        res.sendStatus(HttpStatus.NoContent);
+    };
 
-    if (activeDevicesList === undefined) {
-        res.status(HttpStatus.InternalServerError).json({
-            error: "Internal server error during await securityDevicesService.getActiveDevicesList(req.user!.userId!) inside getDevicesList",
-        });
-    }
-    res.status(HttpStatus.Ok).send(activeDevicesList);
-};
+    public getDevicesList = async (
+        req: RequestWithSessionMetaData<SessionMetaDataType>,
+        res: Response,
+    ) => {
+        const activeDevicesList: Array<DeviceViewModel> =
+            await this.securityDevicesCommandService.getActiveDevicesList(
+                req.user!.userId!,
+            );
+
+        if (activeDevicesList === undefined) {
+            res.status(HttpStatus.InternalServerError).json({
+                error: "Internal server error during await securityDevicesCommandService.getActiveDevicesList(req.user!.userId!) inside getDevicesList",
+            });
+        }
+        res.status(HttpStatus.Ok).send(activeDevicesList);
+    };
+}

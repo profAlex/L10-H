@@ -14,6 +14,7 @@ import { HttpStatus } from "../src/common/http-statuses/http-statuses";
 import { jwtService } from "../src/adapters/verification/jwt-service";
 import { JwtRefreshPayloadType } from "../src/adapters/verification/payload-type";
 import { RegistrationUserInputModel } from "../src/routers/router-types/auth-registration-input-model";
+import { UsersQueryRepository } from "../src/repository-layers/query-repository-layer/users-query-repository";
 
 describe("Test API for managing session life-time and updated refresh-token renewal system", () => {
     const testApp = express();
@@ -108,8 +109,8 @@ describe("Test API for managing session life-time and updated refresh-token rene
         // };
     });
 
-    it("GET '/api/security/devices' - successful login attempt (response 200)", async () => {
-        expect(await dataQueryRepository.returnUsersAmount()).toBe(4);
+    it("GET '/api/security/devices' - should return proper amount of active sessions(devices) equal tp 4", async () => {
+        expect(await UsersQueryRepository.returnUsersAmount()).toBe(4);
 
         const loginCreds_1 = {
             loginOrEmail: "hello_wr",
@@ -265,10 +266,13 @@ describe("Test API for managing session life-time and updated refresh-token rene
         const listOfActiveSessions =
             await dataQueryRepository.getActiveDevicesList(userId_1);
         console.log("LIST OF ACTIVE SESSIONS: ", listOfActiveSessions);
-    });
+
+        expect(listOfActiveSessions.length).toBe(4);
+
+    }, 15000);
 
     it("DELETE '/api/security/devices/:deviceId' - should return error because deviceId inside uri is not viable (not successful)", async () => {
-        expect(await dataQueryRepository.returnUsersAmount()).toBe(4);
+        expect(await UsersQueryRepository.returnUsersAmount()).toBe(4);
 
         const notViableDeviceId = "1111111111111111111111";
         const res1 = await request(testApp).delete(
@@ -303,7 +307,7 @@ describe("Test API for managing session life-time and updated refresh-token rene
     });
 
     it("POST '/api/auth/refresh-token' - attempt to refresh token (successful)", async () => {
-        expect(await dataQueryRepository.returnUsersAmount()).toBe(4);
+        expect(await UsersQueryRepository.returnUsersAmount()).toBe(4);
 
         // извлекаем данные из актуального рефреш-токена
         if (!refreshTokenValue1) {

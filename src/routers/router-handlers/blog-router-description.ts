@@ -47,7 +47,8 @@ export const getSeveralPostsFromBlog = async (req: Request, res: Response) => {
     }); //утилита для извечения трансформированных значений после валидатара
     //в req.query остаются сырые квери параметры (строки)
 
-    const blogId = req.params[IdParamName.BlogId];
+    // const blogId: string = req.params[IdParamName.BlogId];
+    const blogId: string = typeof req.params[IdParamName.BlogId] === 'string' ? req.params[IdParamName.BlogId] : req.params[IdParamName.BlogId][0];
     if (!blogId) {
         console.error(
             "blogId seems to be missing in Request inside getSeveralPostsFromBlog, even though it successfully passed middleware checks",
@@ -70,8 +71,9 @@ export const getSeveralPostsFromBlog = async (req: Request, res: Response) => {
 export const createNewBlogPost = async (req: Request, res: Response) => {
     // const insertedId = await blogsService.createNewBlog(req.body);
 
+    const blogId: string = typeof req.params[IdParamName.BlogId] === 'string' ? req.params[IdParamName.BlogId] : req.params[IdParamName.BlogId][0];
     const insertedId = await blogsService.createNewBlogPost(
-        req.params[IdParamName.BlogId],
+        blogId,
         req.body,
     );
 
@@ -96,8 +98,9 @@ export const createNewBlogPost = async (req: Request, res: Response) => {
 export const findSingleBlog = async (req: Request, res: Response) => {
     // console.warn("<-------LOOK ID_3: ", req.params[IdParamName.BlogId]);
 
+    const blogId: string = typeof req.params[IdParamName.BlogId] === 'string' ? req.params[IdParamName.BlogId] : req.params[IdParamName.BlogId][0];
     const result = await dataQueryRepository.findSingleBlog(
-        req.params[IdParamName.BlogId],
+        blogId,
     );
 
     // console.warn("<-------ID WAS FOUND??", result);
@@ -112,8 +115,10 @@ export const findSingleBlog = async (req: Request, res: Response) => {
 };
 
 export const updateBlog = async (req: Request, res: Response) => {
+
+    const blogId: string = typeof req.params[IdParamName.BlogId] === 'string' ? req.params[IdParamName.BlogId] : req.params[IdParamName.BlogId][0];
     const result = await blogsService.updateBlog(
-        req.params[IdParamName.BlogId],
+        blogId,
         req.body,
     );
 
@@ -127,8 +132,10 @@ export const updateBlog = async (req: Request, res: Response) => {
 };
 
 export const deleteBlog = async (req: Request, res: Response) => {
+
+    const blogId: string = typeof req.params[IdParamName.BlogId] === 'string' ? req.params[IdParamName.BlogId] : req.params[IdParamName.BlogId][0];
     const result = await blogsService.deleteBlog(
-        req.params[IdParamName.BlogId],
+        blogId,
     );
 
     if (result === undefined) {

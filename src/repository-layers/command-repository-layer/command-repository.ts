@@ -14,7 +14,6 @@ import { ObjectId, WithId } from "mongodb";
 import { BlogPostInputModel } from "../../routers/router-types/blog-post-input-model";
 import { CustomError } from "../utility/custom-error-class";
 import { UserInputModel } from "../../routers/router-types/user-input-model";
-import { bcryptService } from "../../adapters/authentication/bcrypt-service";
 import { UserCollectionStorageModel } from "../../routers/router-types/user-storage-model";
 import { CommentViewModel } from "../../routers/router-types/comment-view-model";
 import { CustomResult } from "../../common/result-type/result-type";
@@ -33,6 +32,7 @@ import { RefreshTokenModel } from "../../adapters/verification/auth-refresh-toke
 import { UserSession } from "../../common/classes/session-class";
 import { SessionStorageModel } from "../../routers/router-types/auth-SessionStorageModel";
 import { RequestRestrictionStorageModel } from "../../routers/router-types/auth-RequestRestrictionStorageModel";
+import { BcryptService } from "../../adapters/authentication/bcrypt-service";
 
 export type BloggerCollectionStorageModel = {
     _id: ObjectId;
@@ -504,118 +504,118 @@ export const dataCommandRepository = {
     // методы для управления юзерами
     // *****************************
 
-    async createNewUser(
-        sentNewUser: UserInputModel,
-    ): Promise<string | undefined> {
-        try {
-            const passwordHash = await bcryptService.generateHash(
-                sentNewUser.password,
-            );
-            if (!passwordHash) {
-                throw new CustomError({
-                    errorMessage: {
-                        field: "bcryptService.generateHash",
-                        message: "Generating hash error",
-                    },
-                });
-            }
+    // async createNewUser(
+    //     sentNewUser: UserInputModel,
+    // ): Promise<string | undefined> {
+    //     try {
+    //         const passwordHash = await BcryptService.generateHash(
+    //             sentNewUser.password,
+    //         );
+    //         if (!passwordHash) {
+    //             throw new CustomError({
+    //                 errorMessage: {
+    //                     field: "bcryptService.generateHash",
+    //                     message: "Generating hash error",
+    //                 },
+    //             });
+    //         }
+    //
+    //         const tempId = new ObjectId();
+    //
+    //         // нижеследующее заменили на инициализацию через клас User через extend interface UserCollectionStorageModel
+    //         // const newUserEntry = {
+    //         //     _id: tempId,
+    //         //     id: tempId.toString(),
+    //         //     login: sentNewUser.login,
+    //         //     email: sentNewUser.email,
+    //         //     passwordHash: passwordHash,
+    //         //     createdAt: new Date(),
+    //         // } as UserCollectionStorageModel;
+    //
+    //         const newUserEntry = new User(
+    //             sentNewUser.login,
+    //             sentNewUser.email,
+    //             passwordHash,
+    //             tempId,
+    //         );
+    //
+    //         newUserEntry.emailConfirmation.isConfirmed = true; // для созданных админом пользователей подтверждения не нужно
+    //
+    //         const result = await usersCollection.insertOne(newUserEntry);
+    //
+    //         if (!result.acknowledged) {
+    //             throw new CustomError({
+    //                 errorMessage: {
+    //                     field: "usersCollection.insertOne(newUserEntry)",
+    //                     message: "attempt to insert new user entry failed",
+    //                 },
+    //             });
+    //         }
+    //         return result.insertedId.toString();
+    //     } catch (error) {
+    //         if (error instanceof CustomError) {
+    //             if (error.metaData) {
+    //                 const errorData = error.metaData.errorMessage;
+    //                 console.error(
+    //                     `In field: ${errorData.field} - ${errorData.message}`,
+    //                 );
+    //             } else {
+    //                 console.error(`Unknown error: ${JSON.stringify(error)}`);
+    //             }
+    //
+    //             return undefined;
+    //         } else {
+    //             console.error(`Unknown error: ${JSON.stringify(error)}`);
+    //             throw new Error(
+    //                 "Placeholder for an error to be rethrown and dealt with in the future in createNewUser method of dataCommandRepository",
+    //             );
+    //         }
+    //     }
+    // },
 
-            const tempId = new ObjectId();
-
-            // нижеследующее заменили на инициализацию через клас User через extend interface UserCollectionStorageModel
-            // const newUserEntry = {
-            //     _id: tempId,
-            //     id: tempId.toString(),
-            //     login: sentNewUser.login,
-            //     email: sentNewUser.email,
-            //     passwordHash: passwordHash,
-            //     createdAt: new Date(),
-            // } as UserCollectionStorageModel;
-
-            const newUserEntry = new User(
-                sentNewUser.login,
-                sentNewUser.email,
-                passwordHash,
-                tempId,
-            );
-
-            newUserEntry.emailConfirmation.isConfirmed = true; // для созданных админом пользователей подтверждения не нужно
-
-            const result = await usersCollection.insertOne(newUserEntry);
-
-            if (!result.acknowledged) {
-                throw new CustomError({
-                    errorMessage: {
-                        field: "usersCollection.insertOne(newUserEntry)",
-                        message: "attempt to insert new user entry failed",
-                    },
-                });
-            }
-            return result.insertedId.toString();
-        } catch (error) {
-            if (error instanceof CustomError) {
-                if (error.metaData) {
-                    const errorData = error.metaData.errorMessage;
-                    console.error(
-                        `In field: ${errorData.field} - ${errorData.message}`,
-                    );
-                } else {
-                    console.error(`Unknown error: ${JSON.stringify(error)}`);
-                }
-
-                return undefined;
-            } else {
-                console.error(`Unknown error: ${JSON.stringify(error)}`);
-                throw new Error(
-                    "Placeholder for an error to be rethrown and dealt with in the future in createNewUser method of dataCommandRepository",
-                );
-            }
-        }
-    },
-
-    async deleteUser(userId: string): Promise<null | undefined> {
-        try {
-            if (ObjectId.isValid(userId)) {
-                const idToCheck = new ObjectId(userId);
-                const res = await usersCollection.deleteOne({ _id: idToCheck });
-
-                if (!res.acknowledged) {
-                    throw new CustomError({
-                        errorMessage: {
-                            field: "usersCollection.deleteOne",
-                            message: "attempt to delete user entry failed",
-                        },
-                    });
-                }
-
-                if (res.deletedCount === 1) {
-                    return null;
-                }
-            } else {
-                return undefined;
-            }
-        } catch (error) {
-            if (error instanceof CustomError) {
-                if (error.metaData) {
-                    const errorData = error.metaData.errorMessage;
-                    console.error(
-                        `In field: ${errorData.field} - ${errorData.message}`,
-                    );
-                } else {
-                    console.error(`Unknown error: ${JSON.stringify(error)}`);
-                }
-
-                return undefined;
-            } else {
-                console.error(
-                    `Unknown error inside dataCommandRepository.deleteUser: ${JSON.stringify(error)}`,
-                );
-                throw new Error(
-                    "Placeholder for an error to be rethrown and dealt with in the future in deleteUser method of dataCommandRepository",
-                );
-            }
-        }
-    },
+    // async deleteUser(userId: string): Promise<null | undefined> {
+    //     try {
+    //         if (ObjectId.isValid(userId)) {
+    //             const idToCheck = new ObjectId(userId);
+    //             const res = await usersCollection.deleteOne({ _id: idToCheck });
+    //
+    //             if (!res.acknowledged) {
+    //                 throw new CustomError({
+    //                     errorMessage: {
+    //                         field: "usersCollection.deleteOne",
+    //                         message: "attempt to delete user entry failed",
+    //                     },
+    //                 });
+    //             }
+    //
+    //             if (res.deletedCount === 1) {
+    //                 return null;
+    //             }
+    //         } else {
+    //             return undefined;
+    //         }
+    //     } catch (error) {
+    //         if (error instanceof CustomError) {
+    //             if (error.metaData) {
+    //                 const errorData = error.metaData.errorMessage;
+    //                 console.error(
+    //                     `In field: ${errorData.field} - ${errorData.message}`,
+    //                 );
+    //             } else {
+    //                 console.error(`Unknown error: ${JSON.stringify(error)}`);
+    //             }
+    //
+    //             return undefined;
+    //         } else {
+    //             console.error(
+    //                 `Unknown error inside dataCommandRepository.deleteUser: ${JSON.stringify(error)}`,
+    //             );
+    //             throw new Error(
+    //                 "Placeholder for an error to be rethrown and dealt with in the future in deleteUser method of dataCommandRepository",
+    //             );
+    //         }
+    //     }
+    // },
 
     // *****************************
     // методы для управления комментариями

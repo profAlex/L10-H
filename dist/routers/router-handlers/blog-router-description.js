@@ -46,7 +46,8 @@ const getSeveralPostsFromBlog = (req, res) => __awaiter(void 0, void 0, void 0, 
         includeOptionals: true,
     }); //утилита для извечения трансформированных значений после валидатара
     //в req.query остаются сырые квери параметры (строки)
-    const blogId = req.params[id_names_1.IdParamName.BlogId];
+    // const blogId: string = req.params[IdParamName.BlogId];
+    const blogId = typeof req.params[id_names_1.IdParamName.BlogId] === 'string' ? req.params[id_names_1.IdParamName.BlogId] : req.params[id_names_1.IdParamName.BlogId][0];
     if (!blogId) {
         console.error("blogId seems to be missing in Request inside getSeveralPostsFromBlog, even though it successfully passed middleware checks");
         return res.status(http_statuses_1.HttpStatus.InternalServerError).json({
@@ -60,7 +61,8 @@ const getSeveralPostsFromBlog = (req, res) => __awaiter(void 0, void 0, void 0, 
 exports.getSeveralPostsFromBlog = getSeveralPostsFromBlog;
 const createNewBlogPost = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     // const insertedId = await blogsService.createNewBlog(req.body);
-    const insertedId = yield blogs_service_1.blogsService.createNewBlogPost(req.params[id_names_1.IdParamName.BlogId], req.body);
+    const blogId = typeof req.params[id_names_1.IdParamName.BlogId] === 'string' ? req.params[id_names_1.IdParamName.BlogId] : req.params[id_names_1.IdParamName.BlogId][0];
+    const insertedId = yield blogs_service_1.blogsService.createNewBlogPost(blogId, req.body);
     if (insertedId) {
         // а вот здесь уже идем в query repo с айдишником который нам вернул command repo
         // это нарушение CQRS? Надо сделать такой же метод в dataCommandRepo или надо еще выше поднимать
@@ -77,7 +79,8 @@ const createNewBlogPost = (req, res) => __awaiter(void 0, void 0, void 0, functi
 exports.createNewBlogPost = createNewBlogPost;
 const findSingleBlog = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     // console.warn("<-------LOOK ID_3: ", req.params[IdParamName.BlogId]);
-    const result = yield query_repository_1.dataQueryRepository.findSingleBlog(req.params[id_names_1.IdParamName.BlogId]);
+    const blogId = typeof req.params[id_names_1.IdParamName.BlogId] === 'string' ? req.params[id_names_1.IdParamName.BlogId] : req.params[id_names_1.IdParamName.BlogId][0];
+    const result = yield query_repository_1.dataQueryRepository.findSingleBlog(blogId);
     // console.warn("<-------ID WAS FOUND??", result);
     if (result === undefined) {
         res.sendStatus(http_statuses_1.HttpStatus.NotFound);
@@ -88,7 +91,8 @@ const findSingleBlog = (req, res) => __awaiter(void 0, void 0, void 0, function*
 });
 exports.findSingleBlog = findSingleBlog;
 const updateBlog = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield blogs_service_1.blogsService.updateBlog(req.params[id_names_1.IdParamName.BlogId], req.body);
+    const blogId = typeof req.params[id_names_1.IdParamName.BlogId] === 'string' ? req.params[id_names_1.IdParamName.BlogId] : req.params[id_names_1.IdParamName.BlogId][0];
+    const result = yield blogs_service_1.blogsService.updateBlog(blogId, req.body);
     if (result === undefined) {
         res.sendStatus(http_statuses_1.HttpStatus.NotFound);
         return;
@@ -98,7 +102,8 @@ const updateBlog = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
 });
 exports.updateBlog = updateBlog;
 const deleteBlog = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield blogs_service_1.blogsService.deleteBlog(req.params[id_names_1.IdParamName.BlogId]);
+    const blogId = typeof req.params[id_names_1.IdParamName.BlogId] === 'string' ? req.params[id_names_1.IdParamName.BlogId] : req.params[id_names_1.IdParamName.BlogId][0];
+    const result = yield blogs_service_1.blogsService.deleteBlog(blogId);
     if (result === undefined) {
         res.sendStatus(http_statuses_1.HttpStatus.NotFound);
         return;

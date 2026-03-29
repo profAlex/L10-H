@@ -13,7 +13,7 @@ export class SessionsCommandRepository {
     // }
 
     // там где этот метод используется для гварда - айдишник сессии в базе передаем через req, чтобы впоследствии можно было быстро найти данную сессию
-    static async findSession(
+    async findSession(
         userId: string,
         deviceId: string,
         expiresAt: Date,
@@ -39,7 +39,7 @@ export class SessionsCommandRepository {
         }
     }
 
-    static async createSession(sessionDto: UserSession): Promise<boolean> {
+    async createSession(sessionDto: UserSession): Promise<boolean> {
         try {
             const result = await sessionsDataStorage.insertOne(sessionDto);
 
@@ -51,7 +51,7 @@ export class SessionsCommandRepository {
         }
     }
 
-    static async updateSession(
+    async updateSession(
         expiresAt: Date,
         issuedAt: Date,
         sessionIndexId: ObjectId,
@@ -81,7 +81,7 @@ export class SessionsCommandRepository {
         }
     }
 
-    static async removeSessionBySessionId(sessionId: ObjectId): Promise<undefined | null> {
+    async removeSessionBySessionId(sessionId: ObjectId): Promise<undefined | null> {
         try {
             const result = await sessionsDataStorage.deleteOne({
                 _id: sessionId,
@@ -102,7 +102,7 @@ export class SessionsCommandRepository {
     }
 
 
-    static async removeSessionByDeviceId(deviceId: string): Promise<undefined | null> {
+    async removeSessionByDeviceId(deviceId: string): Promise<undefined | null> {
         try {
             const result = await sessionsDataStorage.deleteOne({
                 deviceId: deviceId,
@@ -123,7 +123,7 @@ export class SessionsCommandRepository {
     }
 
 
-    static async removeAllButOneSession(sessionId: ObjectId, userId:string): Promise<undefined | null> {
+    async removeAllButOneSession(sessionId: ObjectId, userId:string): Promise<undefined | null> {
         try {
             const result = await sessionsDataStorage.deleteMany({
                 userId: userId,

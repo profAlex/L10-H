@@ -9,9 +9,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SecurityDevicesService = void 0;
+exports.SecurityDevicesCommandService = void 0;
 const query_repository_1 = require("../repository-layers/query-repository-layer/query-repository");
-class SecurityDevicesService {
+class SecurityDevicesCommandService {
     constructor(sessionsCommandRepository) {
         this.sessionsCommandRepository = sessionsCommandRepository;
     }
@@ -32,5 +32,5 @@ class SecurityDevicesService {
         });
     }
 }
-exports.SecurityDevicesService = SecurityDevicesService;
+exports.SecurityDevicesCommandService = SecurityDevicesCommandService;
 ;

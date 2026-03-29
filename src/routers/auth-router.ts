@@ -4,28 +4,28 @@ import {
     loginInputModelValidation,
     userInputModelValidation,
 } from "./validation-middleware/UserInputModel-validation-middleware";
-import {
-    attemptToLogin, AuthHandler,
-    logoutOnDemand,
-    provideUserInfo,
-    refreshTokenOnDemand,
-    registrationAttemptByUser,
-    registrationConfirmation,
-    resendRegistrationConfirmation
-} from "./router-handlers/auth-router-description";
+// import {
+//     attemptToLogin, AuthHandler,
+//     logoutOnDemand,
+//     provideUserInfo,
+//     refreshTokenOnDemand,
+//     registrationAttemptByUser,
+//     registrationConfirmation,
+//     resendRegistrationConfirmation
+// } from "./router-handlers/auth-router-description";
 import { accessTokenGuard } from "./guard-middleware/access-token-guard";
 import {
     registrationConfirmationValidator,
     registrationResentConfirmationValidator,
 } from "./validation-middleware/auth-router-general-middleware-validator";
-import { refreshTokenGuard } from "./guard-middleware/refresh-token-guard";
 import {
     ipRequestRestrictionGuard,
     ipRequestRestrictionGuardForRegistration, ipRequestRestrictionGuardForResending
 } from "./guard-middleware/ip-request-restriction-guard";
+import { authHandler, refreshTokenGuardInstance } from "../composition-root/composition-root";
 
 export const authRouter = Router();
-export const authHandler = new AuthHandler();
+
 
 // Try login user to the system
 authRouter.post(
@@ -42,7 +42,7 @@ authRouter.post(
     ipRequestRestrictionGuard,
     registrationConfirmationValidator,
     inputErrorManagementMiddleware,
-    registrationConfirmation,
+    authHandler.registrationConfirmation,
 );
 
 // Registration in the system. Email with confirmation code will be send to passed email address
@@ -51,7 +51,7 @@ authRouter.post(
     ipRequestRestrictionGuardForRegistration,
     userInputModelValidation,
     inputErrorManagementMiddleware,
-    registrationAttemptByUser,
+    authHandler.registrationAttemptByUser,
 );
 
 // Resend Registration confirmation email
@@ -60,16 +60,17 @@ authRouter.post(
     ipRequestRestrictionGuardForResending,
     registrationResentConfirmationValidator,
     inputErrorManagementMiddleware,
-    resendRegistrationConfirmation,
+    authHandler.resendRegistrationConfirmation,
 );
 
 // Get information about current user
-authRouter.get("/me", accessTokenGuard, provideUserInfo);
+authRouter.get("/me", accessTokenGuard, authHandler.provideUserInfo);
 
-// Generate new pair of access and refresh tokens (in cookie client must send correct refreshToken that will be revoked after refreshing)
+// Generate new pair of access and refresh tokens (in cookie client must send
+// correct refreshToken that will be revoked after refreshing)
 authRouter.post("/refresh-token",
-    refreshTokenGuard,
-    refreshTokenOnDemand);
+    refreshTokenGuardInstance.refreshTokenGuard,
+    authHandler.refreshTokenOnDemand);
 
 // In cookie client must send correct refreshToken that will be revoked
-authRouter.post("/logout", refreshTokenGuard, logoutOnDemand);
+authRouter.post("/logout", refreshTokenGuardInstance.refreshTokenGuard, authHandler.logoutOnDemand);

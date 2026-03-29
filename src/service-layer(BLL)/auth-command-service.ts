@@ -1,18 +1,18 @@
 import { Response } from "express";
-import { dataQueryRepository } from "../repository-layers/query-repository-layer/query-repository";
 import { BcryptService } from "../adapters/authentication/bcrypt-service";
-import { jwtService } from "../adapters/verification/jwt-service";
 import { CustomResult } from "../common/result-type/result-type";
 import { HttpStatus } from "../common/http-statuses/http-statuses";
 import { RegistrationUserInputModel } from "../routers/router-types/auth-registration-input-model";
 import { dataCommandRepository } from "../repository-layers/command-repository-layer/command-repository";
 import { RegistrationConfirmationInput } from "../routers/router-types/auth-registration-confirmation-input-model";
-import { ResentRegistrationConfirmationInput } from "../routers/router-types/auth-resent-registration-confirmation-input-model";
+import {
+    ResentRegistrationConfirmationInput
+} from "../routers/router-types/auth-resent-registration-confirmation-input-model";
 import { ObjectId } from "mongodb";
 import { User } from "../common/classes/user-class";
 import {
     emailExamples,
-    mailerService,
+    mailerService
 } from "../adapters/email-sender/mailer-service";
 import { RotationPairToken } from "../adapters/verification/auth-token-rotation-pair";
 import { createTokenPair } from "../adapters/verification/utility-token-pairs-creation";
@@ -24,15 +24,22 @@ import { UsersQueryRepository } from "../repository-layers/query-repository-laye
 import { SessionsCommandRepository } from "../repository-layers/command-repository-layer/sessions-command-repository";
 
 
-export class AuthService {
-    static async loginUser(
+export class AuthCommandService {
+    constructor(
+        protected usersQueryRepository: UsersQueryRepository,
+        protected sessionsCommandRepository: SessionsCommandRepository,
+        protected bcryptService: BcryptService,
+    ) {}
+
+    async loginUser(
         req: RequestWithBody<AuthLoginInputModel>,
         res: Response,
     ): Promise<CustomResult<RotationPairToken>> {
         const { loginOrEmail, password } = req.body;
 
         // проверяем что пользователь с указанным логином/емейлом уже существует в базе
-        const user = await UsersQueryRepository.findByLoginOrEmail(loginOrEmail);
+        const user =
+            await this.usersQueryRepository.findByLoginOrEmail(loginOrEmail);
 
         if (!user) {
             return {
@@ -103,7 +110,7 @@ export class AuthService {
 
         // создаем сессию в базе
         const isSuccessfulSessionCreated =
-            await SessionsCommandRepository.createSession(tempSession);
+            await this.sessionsCommandRepository.createSession(tempSession);
 
         if (!isSuccessfulSessionCreated) {
             console.error(
@@ -144,7 +151,7 @@ export class AuthService {
     }
 
     // пробуем зарегистрировать возвращенный от юзера код подтверждения
-    static async confirmRegistrationCode(
+    async confirmRegistrationCode(
         sentData: RegistrationConfirmationInput,
     ): Promise<CustomResult> {
         try {
@@ -156,7 +163,7 @@ export class AuthService {
                 data: null,
                 statusCode: HttpStatus.InternalServerError,
                 statusDescription:
-                    "Unknown error in AuthService -> confirmRegistrationCode",
+                    "Unknown error in AuthCommandService -> confirmRegistrationCode",
                 errorsMessages: [
                     {
                         field: "",
@@ -168,7 +175,7 @@ export class AuthService {
     }
 
     // пробуем зарегистрировать пользователя по его запросу (т.е. по запросу фронта)
-    static async registerNewUser(
+    async registerNewUser(
         sentData: RegistrationUserInputModel,
     ): Promise<CustomResult> {
         try {
@@ -182,10 +189,10 @@ export class AuthService {
                     data: null,
                     statusCode: HttpStatus.BadRequest,
                     statusDescription:
-                        "AuthService -> registerNewUser -> if(ifUserLoginExists)",
+                        "AuthCommandService -> registerNewUser -> if(ifUserLoginExists)",
                     errorsMessages: [
                         {
-                            field: "AuthService -> registerNewUser -> if(ifUserLoginExists)",
+                            field: "AuthCommandService -> registerNewUser -> if(ifUserLoginExists)",
                             message: "Email or Login already exists!!!",
                         },
                     ],
@@ -196,7 +203,7 @@ export class AuthService {
                     data: null,
                     statusCode: HttpStatus.BadRequest,
                     statusDescription:
-                        "AuthService -> registerNewUser -> if(ifUserEmailExists)",
+                        "AuthCommandService -> registerNewUser -> if(ifUserEmailExists)",
                     errorsMessages: [
                         {
                             field: "email",
@@ -206,7 +213,7 @@ export class AuthService {
                 };
             }
 
-            const passwordHash = await BcryptService.generateHash(
+            const passwordHash = await this.bcryptService.generateHash(
                 sentData.password,
             );
 
@@ -302,7 +309,7 @@ export class AuthService {
                 data: null,
                 statusCode: HttpStatus.InternalServerError,
                 statusDescription:
-                    "Unknown error in AuthService -> registerNewUser",
+                    "Unknown error in AuthCommandService -> registerNewUser",
                 errorsMessages: [
                     {
                         field: "",
@@ -314,11 +321,10 @@ export class AuthService {
     }
 
     // запрос на повторную отправку email с подтверждением регистрационного кода
-    static async resendConfirmRegistrationCode(
+    async resendConfirmRegistrationCode(
         sentData: ResentRegistrationConfirmationInput,
     ): Promise<CustomResult> {
         try {
-
             // const allUsersList = await dataCommandRepository.findAllUsers();
             // console.log("DEBUG: ", allUsersList);
 
@@ -332,7 +338,7 @@ export class AuthService {
                     data: null,
                     statusCode: HttpStatus.BadRequest,
                     statusDescription:
-                        "AuthService -> resendConfirmRegistrationCode -> if (isUserInDatabase)",
+                        "AuthCommandService -> resendConfirmRegistrationCode -> if (isUserInDatabase)",
                     errorsMessages: [
                         {
                             field: "email",
@@ -351,7 +357,7 @@ export class AuthService {
                 data: null,
                 statusCode: HttpStatus.InternalServerError,
                 statusDescription:
-                    "Unknown error in AuthService -> resendConfirmRegistrationCode",
+                    "Unknown error in AuthCommandService -> resendConfirmRegistrationCode",
                 errorsMessages: [
                     {
                         field: "",
@@ -363,7 +369,7 @@ export class AuthService {
     }
 
     // обновляет сессию, генерирует и возвращает два токена
-    static async refreshTokenOnDemand(
+    async refreshTokenOnDemand(
         deviceId: string,
         userId: string,
         sessionId: ObjectId,
@@ -382,11 +388,12 @@ export class AuthService {
         );
 
         // обновляем данные в базе сессий
-        const isSessionUpdated = await SessionsCommandRepository.updateSession(
-            expiresAt,
-            issuedAt,
-            sessionId,
-        );
+        const isSessionUpdated =
+            await this.sessionsCommandRepository.updateSession(
+                expiresAt,
+                issuedAt,
+                sessionId,
+            );
         if (!isSessionUpdated) {
             console.error("Couldn't update session data");
             return {
@@ -395,7 +402,7 @@ export class AuthService {
                 statusDescription: "Couldn't update session data",
                 errorsMessages: [
                     {
-                        field: "AuthService -> refreshTokenOnDemand -> dataCommandRepository.updateSession(expiresAt, issuedAt, sessionId)",
+                        field: "AuthCommandService -> refreshTokenOnDemand -> dataCommandRepository.updateSession(expiresAt, issuedAt, sessionId)",
                         message: "Couldn't update session data",
                     },
                 ],
@@ -440,7 +447,7 @@ export class AuthService {
         //             "Couldn't insert outdated refresh token into the blacklist",
         //         errorsMessages: [
         //             {
-        //                 field: "AuthService -> refreshTokenOnDemand -> if (!ifSucessfullyAddedToBlackList)",
+        //                 field: "AuthCommandService -> refreshTokenOnDemand -> if (!ifSucessfullyAddedToBlackList)",
         //                 message:
         //                     "Couldn't insert outdated refresh token into the blacklist",
         //             },
@@ -451,7 +458,7 @@ export class AuthService {
         return pairOfToken;
     }
 
-    static async logoutOnDemand(
+    async logoutOnDemand(
         // oldRefreshToken: string,
         relatedUserId: string,
         sessionId: ObjectId,
@@ -462,22 +469,24 @@ export class AuthService {
         //         relatedUserId: relatedUserId,
         //     });
         const ifLoggedOutSuccessfully =
-            await SessionsCommandRepository.removeSessionBySessionId(sessionId);
+            await this.sessionsCommandRepository.removeSessionBySessionId(
+                sessionId,
+            );
 
         return ifLoggedOutSuccessfully;
     }
 
     // вспомогательная функция
-    static async checkUserCredentials(
+    async checkUserCredentials(
         password: string,
         passwordHash: string,
     ): Promise<boolean | null> {
-        return BcryptService.checkPassword(password, passwordHash);
+        return this.bcryptService.checkPassword(password, passwordHash);
     }
 };
 
 
-// export const AuthService = {
+// export const AuthCommandService = {
 //     async loginUser(
 //         req: RequestWithBody<AuthLoginInputModel>,
 //         res: Response,
@@ -485,7 +494,7 @@ export class AuthService {
 //         const { loginOrEmail, password } = req.body;
 //
 //         // проверяем что пользователь с указанным логином/емейлом уже существует в базе
-//         const user = await UsersQueryRepository.findByLoginOrEmail(loginOrEmail);
+//         const user = await usersQueryRepository.findByLoginOrEmail(loginOrEmail);
 //
 //         if (!user) {
 //             return {
@@ -556,7 +565,7 @@ export class AuthService {
 //
 //         // создаем сессию в базе
 //         const isSuccessfulSessionCreated =
-//             await SessionsCommandRepository.createSession(tempSession);
+//             await sessionsCommandRepository.createSession(tempSession);
 //
 //         if (!isSuccessfulSessionCreated) {
 //             console.error(
@@ -609,7 +618,7 @@ export class AuthService {
 //                 data: null,
 //                 statusCode: HttpStatus.InternalServerError,
 //                 statusDescription:
-//                     "Unknown error in AuthService -> confirmRegistrationCode",
+//                     "Unknown error in AuthCommandService -> confirmRegistrationCode",
 //                 errorsMessages: [
 //                     {
 //                         field: "",
@@ -635,10 +644,10 @@ export class AuthService {
 //                     data: null,
 //                     statusCode: HttpStatus.BadRequest,
 //                     statusDescription:
-//                         "AuthService -> registerNewUser -> if(ifUserLoginExists)",
+//                         "AuthCommandService -> registerNewUser -> if(ifUserLoginExists)",
 //                     errorsMessages: [
 //                         {
-//                             field: "AuthService -> registerNewUser -> if(ifUserLoginExists)",
+//                             field: "AuthCommandService -> registerNewUser -> if(ifUserLoginExists)",
 //                             message: "Email or Login already exists!!!",
 //                         },
 //                     ],
@@ -649,7 +658,7 @@ export class AuthService {
 //                     data: null,
 //                     statusCode: HttpStatus.BadRequest,
 //                     statusDescription:
-//                         "AuthService -> registerNewUser -> if(ifUserEmailExists)",
+//                         "AuthCommandService -> registerNewUser -> if(ifUserEmailExists)",
 //                     errorsMessages: [
 //                         {
 //                             field: "email",
@@ -755,7 +764,7 @@ export class AuthService {
 //                 data: null,
 //                 statusCode: HttpStatus.InternalServerError,
 //                 statusDescription:
-//                     "Unknown error in AuthService -> registerNewUser",
+//                     "Unknown error in AuthCommandService -> registerNewUser",
 //                 errorsMessages: [
 //                     {
 //                         field: "",
@@ -785,7 +794,7 @@ export class AuthService {
 //                     data: null,
 //                     statusCode: HttpStatus.BadRequest,
 //                     statusDescription:
-//                         "AuthService -> resendConfirmRegistrationCode -> if (isUserInDatabase)",
+//                         "AuthCommandService -> resendConfirmRegistrationCode -> if (isUserInDatabase)",
 //                     errorsMessages: [
 //                         {
 //                             field: "email",
@@ -804,7 +813,7 @@ export class AuthService {
 //                 data: null,
 //                 statusCode: HttpStatus.InternalServerError,
 //                 statusDescription:
-//                     "Unknown error in AuthService -> resendConfirmRegistrationCode",
+//                     "Unknown error in AuthCommandService -> resendConfirmRegistrationCode",
 //                 errorsMessages: [
 //                     {
 //                         field: "",
@@ -835,7 +844,7 @@ export class AuthService {
 //         );
 //
 //         // обновляем данные в базе сессий
-//         const isSessionUpdated = await SessionsCommandRepository.updateSession(
+//         const isSessionUpdated = await sessionsCommandRepository.updateSession(
 //             expiresAt,
 //             issuedAt,
 //             sessionId,
@@ -848,7 +857,7 @@ export class AuthService {
 //                 statusDescription: "Couldn't update session data",
 //                 errorsMessages: [
 //                     {
-//                         field: "AuthService -> refreshTokenOnDemand -> dataCommandRepository.updateSession(expiresAt, issuedAt, sessionId)",
+//                         field: "AuthCommandService -> refreshTokenOnDemand -> dataCommandRepository.updateSession(expiresAt, issuedAt, sessionId)",
 //                         message: "Couldn't update session data",
 //                     },
 //                 ],
@@ -893,7 +902,7 @@ export class AuthService {
 //         //             "Couldn't insert outdated refresh token into the blacklist",
 //         //         errorsMessages: [
 //         //             {
-//         //                 field: "AuthService -> refreshTokenOnDemand -> if (!ifSucessfullyAddedToBlackList)",
+//         //                 field: "AuthCommandService -> refreshTokenOnDemand -> if (!ifSucessfullyAddedToBlackList)",
 //         //                 message:
 //         //                     "Couldn't insert outdated refresh token into the blacklist",
 //         //             },
@@ -915,7 +924,7 @@ export class AuthService {
 //         //         relatedUserId: relatedUserId,
 //         //     });
 //         const ifLoggedOutSuccessfully =
-//             await SessionsCommandRepository.removeSessionBySessionId(sessionId);
+//             await sessionsCommandRepository.removeSessionBySessionId(sessionId);
 //
 //         return ifLoggedOutSuccessfully;
 //     },

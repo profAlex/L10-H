@@ -2,14 +2,11 @@ import {UserInputModel} from "../routers/router-types/user-input-model";
 import {dataCommandRepository} from "../repository-layers/command-repository-layer/command-repository";
 import {isUniqueEmail, isUniqueLogin} from "./utility-functions/is-unique-login-email";
 import {CustomError} from "../repository-layers/utility/custom-error-class";
+import { UsersCommandRepository } from "../repository-layers/command-repository-layer/users-command-repository";
 
-export const usersService = {
-    // getSeveralBlogs, getSeveralPostsById, findSingleBlog переехал в query-repositary-layer, и в потоке который обрабатывает query отсутствует слой service
+export class UsersCommandService {
 
-    // async getSeveralBlogs(sentInputGetBlogsQuery: InputGetBlogsQuery): Promise<{items: WithId<BlogViewModel>[]; totalCount: number}> {
-    //
-    //     return await dataCommandRepository.getSeveralBlogs(sentInputGetBlogsQuery);
-    // },
+    constructor(protected usersCommandRepository:UsersCommandRepository){};
 
     async createNewUser(newUser: UserInputModel): Promise<string | undefined> {
 
@@ -25,10 +22,10 @@ export const usersService = {
             });
         }
 
-        return await dataCommandRepository.createNewUser(newUser);
-    },
+        return await this.usersCommandRepository.createNewUser(newUser);
+    }
 
     async deleteUser (userId: string) : Promise<null | undefined> {
-        return await dataCommandRepository.deleteUser(userId);
-    },
+        return await this.usersCommandRepository.deleteUser(userId);
+    }
 }
