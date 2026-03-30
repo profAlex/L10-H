@@ -16,7 +16,7 @@ const DEFAULT_COOKIE_SECURE = true;
 const DEFAULT_MAIL_PORT = "465";
 const DEFAULT_MAIL_HOST = "smtp.yandex.ru";
 const DEFAULT_MAIL_LOGIN = "geniusb198";
-const DEFAULT_MAIL_PASS = "gbpqxmmaleaqmiwu";
+const DEFAULT_MAIL_PASS = "ywzsvigfobsbmqsp";
 
 
 // структура конфигурационных значений
