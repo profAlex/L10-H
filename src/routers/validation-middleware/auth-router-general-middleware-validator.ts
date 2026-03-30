@@ -15,14 +15,20 @@ const registrationResentConfirmationEmailValidator = body('email')
     .matches(/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/)
     .withMessage('Field "email" must be a valid email address');
 
-const passwordValidation = body("password")
+const newPasswordValidation = body("newPassword")
     .exists()
-    .withMessage("Field 'password' must be specified")
+    .withMessage("Field 'newPassword' must be specified")
     .isString()
-    .withMessage("Incorrect type of field 'password' - must be string")
+    .withMessage("Incorrect type of field 'newPassword' - must be string")
     .trim()
     .isLength({ min: 6, max: 20 })
-    .withMessage("Field 'password' must  have length between 6 and 20 symbols");
+    .withMessage("Field 'newPassword' must  have length between 6 and 20 symbols");
+
+const recoveryCodeFieldValidation = body("recoveryCode")
+    .exists()
+    .withMessage("Field 'recoveryCode' is required")
+    .isString()
+    .withMessage("Field 'recoveryCode' must be of type string");
 
 export const registrationConfirmationValidator = [
     registrationConfirmationCodeValidator
@@ -33,6 +39,6 @@ export const registrationResentConfirmationValidator = [
 ];
 
 export const recoveryCodeValidator = [
-    registrationConfirmationCodeValidator,
-    passwordValidation
+    recoveryCodeFieldValidation,
+    newPasswordValidation
 ];
