@@ -490,6 +490,7 @@ export class UsersCommandRepository {
             }
 
             // юзер не был найден или просрочен
+            // конкретно эта ошибка строго регламентирована в ТЗ, поле должно быть указано правильно: recoveryCode
             return {
                 data: null,
                 statusCode: HttpStatus.BadRequest,
@@ -497,7 +498,7 @@ export class UsersCommandRepository {
                     "Couldn't confirm new password: UsersCommandRepository -> confirmPasswordRecoveryCode",
                 errorsMessages: [
                     {
-                        field: "code",
+                        field: "recoveryCode",
                         message:
                             "Couldn't confirm new password - not existent or out of date",
                     },
