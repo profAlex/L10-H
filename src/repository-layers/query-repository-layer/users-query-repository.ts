@@ -1,3 +1,7 @@
+import "reflect-metadata";
+import { inject, injectable } from "inversify";
+
+
 import { PaginatedUserViewModel } from "../../routers/router-types/user-paginated-view-model";
 import { InputGetUsersQuery } from "../../routers/router-types/user-search-input-model";
 import { ObjectId, WithId } from "mongodb";

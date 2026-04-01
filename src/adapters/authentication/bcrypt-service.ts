@@ -1,5 +1,8 @@
+import "reflect-metadata";
+import { injectable } from "inversify";
 import bcrypt from "bcrypt";
 
+@injectable()
 export class BcryptService {
     async generateHash(password: string): Promise<string | null> {
         try {

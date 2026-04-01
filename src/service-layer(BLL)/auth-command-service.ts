@@ -1,3 +1,7 @@
+import "reflect-metadata";
+import { inject, injectable } from "inversify";
+
+
 import { Response } from "express";
 import { BcryptService } from "../adapters/authentication/bcrypt-service";
 import { CustomResult } from "../common/result-type/result-type";
@@ -25,14 +29,15 @@ import { SessionsCommandRepository } from "../repository-layers/command-reposito
 import { PasswordRecoveryInputModel } from "../routers/router-types/auth-password-recovery-input-model";
 import { NewPasswordRecoveryInputModel } from "../routers/router-types/auth-new-password-recovery-input-model";
 import { UsersCommandRepository } from "../repository-layers/command-repository-layer/users-command-repository";
+import { TYPES } from "../composition-root/ioc-types";
 
-
+@injectable()
 export class AuthCommandService {
     constructor(
-        protected usersCommandRepository: UsersCommandRepository,
-        protected usersQueryRepository: UsersQueryRepository,
-        protected sessionsCommandRepository: SessionsCommandRepository,
-        protected bcryptService: BcryptService
+        @inject(TYPES.UsersCommandRepository) protected usersCommandRepository: UsersCommandRepository,
+        @inject(TYPES.UsersQueryRepository) protected usersQueryRepository: UsersQueryRepository,
+        @inject(TYPES.SessionsCommandRepository) protected sessionsCommandRepository: SessionsCommandRepository,
+        @inject(TYPES.BcryptService) protected bcryptService: BcryptService
     ) {
     }
 

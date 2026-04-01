@@ -1,3 +1,6 @@
+import "reflect-metadata";
+import { inject, injectable } from "inversify";
+
 import { CustomError } from "../utility/custom-error-class";
 import { User } from "../../common/classes/user-class";
 import { BcryptService } from "../../adapters/authentication/bcrypt-service";
@@ -14,10 +17,12 @@ import { NewPasswordRecoveryInputModel } from "../../routers/router-types/auth-n
 import {
     ResentRegistrationConfirmationInput
 } from "../../routers/router-types/auth-resent-registration-confirmation-input-model";
+import { TYPES } from "../../composition-root/ioc-types";
 
+@injectable()
 export class UsersCommandRepository {
 
-    constructor(protected bcryptService:BcryptService) {}
+    constructor(@inject(TYPES.BcryptService) protected bcryptService:BcryptService) {}
 
     async createNewUser(
         sentNewUser: UserInputModel,

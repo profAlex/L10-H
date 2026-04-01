@@ -1,7 +1,7 @@
 import express from "express";
+import request from "supertest";
 import { setupApp } from "../src/setup-app";
 import { closeDB, runDB } from "../src/db/mongo.db";
-import request from "supertest";
 import { TESTING_PATH, USERS_PATH } from "../src/routers/pathes/router-pathes";
 import { UserInputModel } from "../src/routers/router-types/user-input-model";
 import { dataCommandRepository } from "../src/repository-layers/command-repository-layer/command-repository";
@@ -404,3 +404,7 @@ describe("Test API for managing users ", () => {
             .toBe(4);
     });
 });
+// function expect(status: number) {
+//     throw new Error("Function not implemented.");
+// }
+

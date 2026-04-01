@@ -1,10 +1,15 @@
+import "reflect-metadata";
+import { inject, injectable } from "inversify";
+
 import { InputGetUsersQuery } from "../routers/router-types/user-search-input-model";
 import { PaginatedUserViewModel } from "../routers/router-types/user-paginated-view-model";
 import { UsersQueryRepository } from "../repository-layers/query-repository-layer/users-query-repository";
 import { UserViewModel } from "../routers/router-types/user-view-model";
+import { TYPES } from "../composition-root/ioc-types";
 
+@injectable()
 export class UsersQueryService{
-    constructor (protected usersQueryRepository:UsersQueryRepository){};
+    constructor (@inject(TYPES.UsersQueryRepository) protected usersQueryRepository:UsersQueryRepository){};
 
     async getSeveralUsers(
         sentInputGetUsersQuery: InputGetUsersQuery

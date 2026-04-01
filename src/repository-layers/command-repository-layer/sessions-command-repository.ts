@@ -1,7 +1,12 @@
+import "reflect-metadata";
+import { inject, injectable } from "inversify";
+
+
 import { ObjectId } from "mongodb";
 import { sessionsDataStorage } from "../../db/mongo.db";
 import { UserSession } from "../../common/classes/session-class";
 
+@injectable()
 export class SessionsCommandRepository {
     // export type SessionStorageModel = {
     //     userId: string;

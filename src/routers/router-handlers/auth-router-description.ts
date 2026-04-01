@@ -1,3 +1,6 @@
+import "reflect-metadata";
+import { inject, injectable } from "inversify";
+
 import { Request, Response } from "express";
 import { AuthCommandService } from "../../service-layer(BLL)/auth-command-service";
 import { CustomResult } from "../../common/result-type/result-type";
@@ -15,9 +18,11 @@ import { ResentRegistrationConfirmationInput } from "../router-types/auth-resent
 import { RotationPairToken } from "../../adapters/verification/auth-token-rotation-pair";
 import { PasswordRecoveryInputModel } from "../router-types/auth-password-recovery-input-model";
 import { NewPasswordRecoveryInputModel } from "../router-types/auth-new-password-recovery-input-model";
+import { TYPES } from "../../composition-root/ioc-types";
 
+@injectable()
 export class AuthHandler {
-    constructor(protected authCommandService: AuthCommandService) {}
+    constructor(@inject(TYPES.AuthCommandService) protected authCommandService: AuthCommandService) {}
 
     public attemptToLogin = async (
         req: RequestWithBody<AuthLoginInputModel>,

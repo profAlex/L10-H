@@ -1,3 +1,5 @@
+import "reflect-metadata";
+import { Container } from "inversify";
 import express from "express";
 import request from "supertest";
 import { setupApp } from "../src/setup-app";
@@ -13,6 +15,7 @@ import { LoginInputModel } from "../src/routers/router-types/login-input-model";
 import jwt from "jsonwebtoken";
 import { envConfig } from "../src/config";
 import { usersCommandRepository, usersQueryRepository } from "../src/composition-root/composition-root";
+import { describe, it } from '@jest/globals';
 
 describe("Test API for managing login, registration and registration-confirmation services", () => {
     const testApp = express();
@@ -572,3 +575,15 @@ describe("Test API for managing login, registration and registration-confirmatio
 
 
 });
+// function beforeAll(arg0: () => Promise<void>) {
+//     throw new Error("Function not implemented.");
+// }
+//
+// function afterAll(arg0: () => Promise<void>) {
+//     throw new Error("Function not implemented.");
+// }
+//
+// function expect(status: number) {
+//     throw new Error("Function not implemented.");
+// }
+

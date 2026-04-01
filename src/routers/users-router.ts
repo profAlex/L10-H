@@ -12,14 +12,20 @@ import { userInputModelValidation } from "./validation-middleware/UserInputModel
 import { createIdValidator } from "./validation-middleware/id-verification-and-validation";
 import { IdParamName } from "./util-enums/id-names";
 import { CollectionNames } from "../db/collection-names";
-import { usersHandler } from "../composition-root/composition-root";
+import { container } from "../composition-root/composition-root";
+import { UsersHandler } from "./router-handlers/user-router-description";
+import { TYPES } from "../composition-root/ioc-types";
 
 export const usersRouter = Router();
+
+const usersHandler = container.get<UsersHandler>(TYPES.UsersHandler);
 
 const validateUserId = createIdValidator(
     IdParamName.UserId,
     CollectionNames.Users,
 );
+
+
 
 usersRouter.get(
     "/",

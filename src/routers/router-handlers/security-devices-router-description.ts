@@ -1,3 +1,6 @@
+import "reflect-metadata";
+import { inject, injectable } from "inversify";
+
 import { Response } from "express";
 import {
     RequestWithParamsAndSessionMetaData,
@@ -8,10 +11,12 @@ import { HttpStatus } from "../../common/http-statuses/http-statuses";
 import { SecurityDevicesCommandService } from "../../service-layer(BLL)/security-devices-command-service";
 import { SessionMetaDataType } from "../router-types/user-id-type";
 import { DeviceViewModel } from "../router-types/security-devices-device-view-model";
+import { TYPES } from "../../composition-root/ioc-types";
 
+@injectable()
 export class SecurityDevicesHandler {
     constructor(
-        protected securityDevicesCommandService: SecurityDevicesCommandService,
+        @inject(TYPES.SecurityDevicesCommandService) protected securityDevicesCommandService: SecurityDevicesCommandService,
     ) {}
 
     public removeSessionById = async (

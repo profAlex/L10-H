@@ -1,3 +1,6 @@
+import "reflect-metadata";
+import { inject, injectable } from "inversify";
+
 import { NextFunction, Request, Response } from "express";
 import { HttpStatus } from "../../common/http-statuses/http-statuses";
 import { jwtService } from "../../adapters/verification/jwt-service";
@@ -6,10 +9,12 @@ import { JwtRefreshPayloadType } from "../../adapters/verification/payload-type"
 import { ObjectId } from "mongodb";
 import { dataQueryRepository } from "../../repository-layers/query-repository-layer/query-repository";
 import { SessionsCommandRepository } from "../../repository-layers/command-repository-layer/sessions-command-repository";
+import { TYPES } from "../../composition-root/ioc-types";
 
+@injectable()
 export class RefreshTokenGuard {
 
-    constructor(protected sessionsCommandRepository: SessionsCommandRepository) {};
+    constructor(@inject(TYPES.SessionsCommandRepository) protected sessionsCommandRepository: SessionsCommandRepository) {};
 
     public refreshTokenGuard = async (
         req: Request,

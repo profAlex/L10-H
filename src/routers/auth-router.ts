@@ -14,10 +14,13 @@ import {
     ipRequestRestrictionGuard,
     ipRequestRestrictionGuardForRegistration, ipRequestRestrictionGuardForResending
 } from "./guard-middleware/ip-request-restriction-guard";
-import { authHandler, refreshTokenGuardInstance } from "../composition-root/composition-root";
+import { container, refreshTokenGuardInstance } from "../composition-root/composition-root";
+import { AuthHandler } from "./router-handlers/auth-router-description";
+import { TYPES } from "../composition-root/ioc-types";
 
 export const authRouter = Router();
 
+const authHandler = container.get<AuthHandler>(TYPES.AuthHandler); // в том файле где мы определяем руты там и импортируем определения классов, используемых в руте
 
 // Try login user to the system
 authRouter.post(

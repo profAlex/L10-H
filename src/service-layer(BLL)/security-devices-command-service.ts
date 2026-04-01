@@ -1,13 +1,17 @@
+import "reflect-metadata";
+import { inject, injectable } from "inversify";
+
 import { ObjectId } from "mongodb";
 import { dataCommandRepository } from "../repository-layers/command-repository-layer/command-repository";
 import { DeviceViewModel } from "../routers/router-types/security-devices-device-view-model";
 import { dataQueryRepository } from "../repository-layers/query-repository-layer/query-repository";
 import { SessionsCommandRepository } from "../repository-layers/command-repository-layer/sessions-command-repository";
+import { TYPES } from "../composition-root/ioc-types";
 
-
+@injectable()
 export class SecurityDevicesCommandService {
 
-    constructor(protected sessionsCommandRepository: SessionsCommandRepository) {};
+    constructor(@inject(TYPES.SessionsCommandRepository) protected sessionsCommandRepository: SessionsCommandRepository) {};
 
     async removeSessionById(deviceId: string): Promise<null | undefined> {
         return await this.sessionsCommandRepository.removeSessionByDeviceId(deviceId);
